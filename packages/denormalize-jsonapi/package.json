@@ -1,0 +1,37 @@
+{
+  "name": "denormalize-jsonapi",
+  "version": "1.0.5",
+  "description": "Denormalize {json:api} (v1.0) documents into a javascript object tree",
+  "license": "MIT",
+  "homepage": "https://github.com/boromisp/jsonapi-tools/tree/master/packages/denormalize-jsonapi",
+  "author": {
+    "name": "Peter Boromissza",
+    "email": "p.boromissza@mohanet.com"
+  },
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "scripts": {
+    "test": "mocha test",
+    "lint": "tslint src",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "jsonapi-types": "^0.1.0"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^3.4.1",
+    "tslint": "^5.3.2",
+    "typescript": "^2.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/boromisp/jsonapi-tools.git"
+  },
+  "files": [
+    "lib"
+  ],
+  "keywords": [
+    "jsonapi"
+  ]
+}

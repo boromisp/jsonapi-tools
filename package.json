@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "name": "jsonapi-tools",
+  "repository": "git@github.com:boromisp/jsonapi-tools.git",
+  "author": "Peter Boromissza <p.boromissza@mohanet.com>",
+  "devDependencies": {
+    "lerna": "^2.0.0-rc.5"
+  },
+  "scripts": {
+    "lerna": "lerna"
+  }
+}
