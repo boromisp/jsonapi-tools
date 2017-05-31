@@ -10,14 +10,14 @@ export interface ISchemaBase {
 }
 
 export interface IRelationshipSchema extends ISchemaBase {
-  links?: (obj: any) => IRelationshipLinks;
+  links?: (parentType: string, parentId: string, relationship: string) => IRelationshipLinks;
 }
 
 export interface ISchema extends ISchemaBase {
   type: string;
   attributes?: string[];
   relationships?: { [key: string]: IRelationshipSchema };
-  links?: (obj: any) => IResourceLinks;
+  links?: (id?: string) => IResourceLinks;
 }
 
 export interface IDataLinkage {

@@ -3,15 +3,11 @@
 import { IRelationshipSchema, ILinkage, ILinkageData, isDataLinkage } from '../../../types/model';
 import { IResourceIdentifierObject, IRelationshipObject } from 'jsonapi-types';
 
-export type TypeID = string | number;
-
-export type TypeLinkage = ILinkage | ILinkage[] | null;
-
 export default function dataToLinkage(
   schema: IRelationshipSchema,
-  data: TypeLinkage,
+  data: ILinkage | ILinkage[] | null,
   parentType: string,
-  parentId: TypeID,
+  parentId: string,
   relationship: string): IRelationshipObject {
 
   function mapLinkage(item: ILinkage): IResourceIdentifierObject {
@@ -29,7 +25,7 @@ export default function dataToLinkage(
 
   return {
     data: Array.isArray(data) ? data.map(mapLinkage) : (data || data === 0) ? mapLinkage(data) : null,
-    links: schema.links ? schema.links({ parentType, parentId, relationship }) : {
+    links: schema.links ? schema.links(parentType, parentId, relationship) : {
       self: `/${parentType}/${parentId}/relationships/${relationship}`,
       related: `/${parentType}/${parentId}/${relationship}`
     }
