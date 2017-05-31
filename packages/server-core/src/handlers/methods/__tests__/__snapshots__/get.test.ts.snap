@@ -1,0 +1,775 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Test getting a single resource Creates response document on success 1`] = `
+Object {
+  "body": Object {
+    "data": Object {
+      "id": "1",
+      "links": Object {
+        "self": "/my-type/1",
+      },
+      "type": "my-type",
+    },
+    "links": Object {
+      "self": "/my-type/1",
+    },
+  },
+  "status": 200,
+}
+`;
+
+exports[`Test getting a single resource Includes attributes 1`] = `
+Object {
+  "body": Object {
+    "data": Object {
+      "attributes": Object {
+        "attr": "1",
+        "field": Array [
+          "2",
+          "3",
+        ],
+        "foo": Object {
+          "bar": 2009-02-13T23:31:30.123Z,
+        },
+      },
+      "id": "1",
+      "links": Object {
+        "self": "/my-type/1",
+      },
+      "type": "my-type",
+    },
+    "links": Object {
+      "self": "/my-type/1",
+    },
+  },
+  "status": 200,
+}
+`;
+
+exports[`Test getting a single resource Includes related resource 1`] = `
+Object {
+  "body": Object {
+    "data": Object {
+      "id": "1",
+      "links": Object {
+        "self": "/my-type/1",
+      },
+      "relationships": Object {
+        "rel1": Object {
+          "data": Object {
+            "id": "1",
+            "type": "other-type",
+          },
+          "links": Object {
+            "related": "/my-type/1/rel1",
+            "self": "/my-type/1/relationships/rel1",
+          },
+        },
+      },
+      "type": "my-type",
+    },
+    "included": Array [
+      Object {
+        "id": "1",
+        "links": Object {
+          "self": "/other-type/1",
+        },
+        "type": "other-type",
+      },
+    ],
+    "links": Object {
+      "self": "/my-type/1",
+    },
+  },
+  "status": 200,
+}
+`;
+
+exports[`Test getting a single resource Includes related resources 1`] = `
+Object {
+  "body": Object {
+    "data": Object {
+      "id": "1",
+      "links": Object {
+        "self": "/my-type/1",
+      },
+      "relationships": Object {
+        "rel1": Object {
+          "data": Array [
+            Object {
+              "id": "1",
+              "type": "other-type",
+            },
+            Object {
+              "id": "2",
+              "type": "other-type",
+            },
+            Object {
+              "id": "3",
+              "type": "other-type",
+            },
+          ],
+          "links": Object {
+            "related": "/my-type/1/rel1",
+            "self": "/my-type/1/relationships/rel1",
+          },
+        },
+      },
+      "type": "my-type",
+    },
+    "included": Array [
+      Object {
+        "id": "1",
+        "links": Object {
+          "self": "/other-type/1",
+        },
+        "type": "other-type",
+      },
+      Object {
+        "id": "2",
+        "links": Object {
+          "self": "/other-type/2",
+        },
+        "type": "other-type",
+      },
+      Object {
+        "id": "3",
+        "links": Object {
+          "self": "/other-type/3",
+        },
+        "type": "other-type",
+      },
+    ],
+    "links": Object {
+      "self": "/my-type/1",
+    },
+  },
+  "status": 200,
+}
+`;
+
+exports[`Test getting a single resource Sets null relationship data 1`] = `
+Object {
+  "body": Object {
+    "data": Object {
+      "id": "1",
+      "links": Object {
+        "self": "/my-type/1",
+      },
+      "relationships": Object {
+        "rel1": Object {
+          "data": null,
+          "links": Object {
+            "related": "/my-type/1/rel1",
+            "self": "/my-type/1/relationships/rel1",
+          },
+        },
+      },
+      "type": "my-type",
+    },
+    "links": Object {
+      "self": "/my-type/1",
+    },
+  },
+  "status": 200,
+}
+`;
+
+exports[`Test getting a single resource Throws 404 if null returned 1`] = `[CustomError: Item of type my-type with id 1 not found., status: 404]`;
+
+exports[`Test getting a single resource Throws if model not found 1`] = `[CustomError: Model for type my-type could not be found., status: 404]`;
+
+exports[`Test getting a single resource Throws on invalid include 1`] = `[CustomError: Invalid include. Type other-type has no relationship named rel2., status: 400]`;
+
+exports[`Test getting all resources Includes attributes 1`] = `
+Object {
+  "body": Object {
+    "data": Array [
+      Object {
+        "attributes": Object {
+          "attr": "1",
+          "field": Array [
+            "2",
+            "3",
+          ],
+          "foo": Object {
+            "bar": 2009-02-13T23:31:30.123Z,
+          },
+        },
+        "id": "1",
+        "links": Object {
+          "self": "/my-type/1",
+        },
+        "type": "my-type",
+      },
+      Object {
+        "attributes": Object {
+          "attr": "1",
+          "field": Array [
+            "2",
+            "3",
+          ],
+          "foo": Object {
+            "bar": 2009-02-13T23:31:30.123Z,
+          },
+        },
+        "id": "2",
+        "links": Object {
+          "self": "/my-type/2",
+        },
+        "type": "my-type",
+      },
+      Object {
+        "attributes": Object {
+          "attr": "1",
+          "field": Array [
+            "2",
+            "3",
+          ],
+          "foo": Object {
+            "bar": 2009-02-13T23:31:30.123Z,
+          },
+        },
+        "id": "3",
+        "links": Object {
+          "self": "/my-type/3",
+        },
+        "type": "my-type",
+      },
+      Object {
+        "attributes": Object {
+          "attr": "1",
+          "field": Array [
+            "2",
+            "3",
+          ],
+          "foo": Object {
+            "bar": 2009-02-13T23:31:30.123Z,
+          },
+        },
+        "id": "4",
+        "links": Object {
+          "self": "/my-type/4",
+        },
+        "type": "my-type",
+      },
+      Object {
+        "attributes": Object {
+          "attr": "1",
+          "field": Array [
+            "2",
+            "3",
+          ],
+          "foo": Object {
+            "bar": 2009-02-13T23:31:30.123Z,
+          },
+        },
+        "id": "5",
+        "links": Object {
+          "self": "/my-type/5",
+        },
+        "type": "my-type",
+      },
+    ],
+    "links": Object {
+      "self": "/my-type",
+    },
+  },
+  "status": 200,
+}
+`;
+
+exports[`Test getting all resources Includes related resource 1`] = `
+Object {
+  "body": Object {
+    "data": Array [
+      Object {
+        "id": "1",
+        "links": Object {
+          "self": "/my-type/1",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": Object {
+              "id": "99",
+              "type": "other-type",
+            },
+            "links": Object {
+              "related": "/my-type/1/rel1",
+              "self": "/my-type/1/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "2",
+        "links": Object {
+          "self": "/my-type/2",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": Object {
+              "id": "98",
+              "type": "other-type",
+            },
+            "links": Object {
+              "related": "/my-type/2/rel1",
+              "self": "/my-type/2/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "3",
+        "links": Object {
+          "self": "/my-type/3",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": Object {
+              "id": "97",
+              "type": "other-type",
+            },
+            "links": Object {
+              "related": "/my-type/3/rel1",
+              "self": "/my-type/3/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "4",
+        "links": Object {
+          "self": "/my-type/4",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": Object {
+              "id": "96",
+              "type": "other-type",
+            },
+            "links": Object {
+              "related": "/my-type/4/rel1",
+              "self": "/my-type/4/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "5",
+        "links": Object {
+          "self": "/my-type/5",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": Object {
+              "id": "95",
+              "type": "other-type",
+            },
+            "links": Object {
+              "related": "/my-type/5/rel1",
+              "self": "/my-type/5/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+    ],
+    "included": Array [
+      Object {
+        "id": "99",
+        "links": Object {
+          "self": "/other-type/99",
+        },
+        "type": "other-type",
+      },
+      Object {
+        "id": "98",
+        "links": Object {
+          "self": "/other-type/98",
+        },
+        "type": "other-type",
+      },
+      Object {
+        "id": "97",
+        "links": Object {
+          "self": "/other-type/97",
+        },
+        "type": "other-type",
+      },
+      Object {
+        "id": "96",
+        "links": Object {
+          "self": "/other-type/96",
+        },
+        "type": "other-type",
+      },
+      Object {
+        "id": "95",
+        "links": Object {
+          "self": "/other-type/95",
+        },
+        "type": "other-type",
+      },
+    ],
+    "links": Object {
+      "self": "/my-type",
+    },
+  },
+  "status": 200,
+}
+`;
+
+exports[`Test getting all resources Includes related resources 1`] = `
+Object {
+  "body": Object {
+    "data": Array [
+      Object {
+        "id": "1",
+        "links": Object {
+          "self": "/my-type/1",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": Array [
+              Object {
+                "id": "95",
+                "type": "other-type",
+              },
+              Object {
+                "id": "95",
+                "type": "other-type",
+              },
+              Object {
+                "id": "95",
+                "type": "other-type",
+              },
+            ],
+            "links": Object {
+              "related": "/my-type/1/rel1",
+              "self": "/my-type/1/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "2",
+        "links": Object {
+          "self": "/my-type/2",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": Array [
+              Object {
+                "id": "90",
+                "type": "other-type",
+              },
+              Object {
+                "id": "90",
+                "type": "other-type",
+              },
+              Object {
+                "id": "90",
+                "type": "other-type",
+              },
+            ],
+            "links": Object {
+              "related": "/my-type/2/rel1",
+              "self": "/my-type/2/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "3",
+        "links": Object {
+          "self": "/my-type/3",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": Array [
+              Object {
+                "id": "85",
+                "type": "other-type",
+              },
+              Object {
+                "id": "85",
+                "type": "other-type",
+              },
+              Object {
+                "id": "85",
+                "type": "other-type",
+              },
+            ],
+            "links": Object {
+              "related": "/my-type/3/rel1",
+              "self": "/my-type/3/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "4",
+        "links": Object {
+          "self": "/my-type/4",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": Array [
+              Object {
+                "id": "80",
+                "type": "other-type",
+              },
+              Object {
+                "id": "80",
+                "type": "other-type",
+              },
+              Object {
+                "id": "80",
+                "type": "other-type",
+              },
+            ],
+            "links": Object {
+              "related": "/my-type/4/rel1",
+              "self": "/my-type/4/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "5",
+        "links": Object {
+          "self": "/my-type/5",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": Array [
+              Object {
+                "id": "75",
+                "type": "other-type",
+              },
+              Object {
+                "id": "75",
+                "type": "other-type",
+              },
+              Object {
+                "id": "75",
+                "type": "other-type",
+              },
+            ],
+            "links": Object {
+              "related": "/my-type/5/rel1",
+              "self": "/my-type/5/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+    ],
+    "included": Array [
+      Object {
+        "id": "95",
+        "links": Object {
+          "self": "/other-type/95",
+        },
+        "type": "other-type",
+      },
+      Object {
+        "id": "90",
+        "links": Object {
+          "self": "/other-type/90",
+        },
+        "type": "other-type",
+      },
+      Object {
+        "id": "85",
+        "links": Object {
+          "self": "/other-type/85",
+        },
+        "type": "other-type",
+      },
+      Object {
+        "id": "80",
+        "links": Object {
+          "self": "/other-type/80",
+        },
+        "type": "other-type",
+      },
+      Object {
+        "id": "75",
+        "links": Object {
+          "self": "/other-type/75",
+        },
+        "type": "other-type",
+      },
+    ],
+    "links": Object {
+      "self": "/my-type",
+    },
+  },
+  "status": 200,
+}
+`;
+
+exports[`Test getting all resources Returns body with all items found 1`] = `
+Object {
+  "body": Object {
+    "data": Array [
+      Object {
+        "id": "1",
+        "links": Object {
+          "self": "/my-type/1",
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "2",
+        "links": Object {
+          "self": "/my-type/2",
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "3",
+        "links": Object {
+          "self": "/my-type/3",
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "4",
+        "links": Object {
+          "self": "/my-type/4",
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "5",
+        "links": Object {
+          "self": "/my-type/5",
+        },
+        "type": "my-type",
+      },
+    ],
+    "links": Object {
+      "self": "/my-type",
+    },
+  },
+  "status": 200,
+}
+`;
+
+exports[`Test getting all resources Returns body with empty data array if no items found 1`] = `
+Object {
+  "body": Object {
+    "data": Array [],
+    "links": Object {
+      "self": "/my-type",
+    },
+  },
+  "status": 200,
+}
+`;
+
+exports[`Test getting all resources Sets null relationship data 1`] = `
+Object {
+  "body": Object {
+    "data": Array [
+      Object {
+        "id": "1",
+        "links": Object {
+          "self": "/my-type/1",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": null,
+            "links": Object {
+              "related": "/my-type/1/rel1",
+              "self": "/my-type/1/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "2",
+        "links": Object {
+          "self": "/my-type/2",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": null,
+            "links": Object {
+              "related": "/my-type/2/rel1",
+              "self": "/my-type/2/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "3",
+        "links": Object {
+          "self": "/my-type/3",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": null,
+            "links": Object {
+              "related": "/my-type/3/rel1",
+              "self": "/my-type/3/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "4",
+        "links": Object {
+          "self": "/my-type/4",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": null,
+            "links": Object {
+              "related": "/my-type/4/rel1",
+              "self": "/my-type/4/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+      Object {
+        "id": "5",
+        "links": Object {
+          "self": "/my-type/5",
+        },
+        "relationships": Object {
+          "rel1": Object {
+            "data": null,
+            "links": Object {
+              "related": "/my-type/5/rel1",
+              "self": "/my-type/5/relationships/rel1",
+            },
+          },
+        },
+        "type": "my-type",
+      },
+    ],
+    "links": Object {
+      "self": "/my-type",
+    },
+  },
+  "status": 200,
+}
+`;
+
+exports[`Test getting all resources Throws if model not found 1`] = `[CustomError: Model for type my-type could not be found., status: 404]`;

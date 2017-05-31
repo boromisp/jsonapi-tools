@@ -11,7 +11,7 @@ export default function dataToResource(schema: ISchema, data: IResourceData | nu
   }
 
   const resource: IResourceObject = {
-    links: schema.links ? schema.links({ id: data.id }) : {
+    links: schema.links ? schema.links(data.id) : {
       self: `/${schema.type}/${data.id}`
     },
     type: schema.type,

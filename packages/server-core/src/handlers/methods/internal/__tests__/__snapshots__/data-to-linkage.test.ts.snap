@@ -1,0 +1,147 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Test converting to-many relationships Convert number ID to IRelationshipObject 1`] = `
+Object {
+  "data": Array [
+    Object {
+      "id": "1",
+      "type": "related-type",
+    },
+    Object {
+      "id": "2",
+      "type": "related-type",
+    },
+    Object {
+      "id": "3",
+      "type": "related-type",
+    },
+  ],
+  "links": Object {
+    "related": "/test-type/1/rel",
+    "self": "/test-type/1/relationships/rel",
+  },
+}
+`;
+
+exports[`Test converting to-many relationships Convert number ILinkage to IRelationshipObject 1`] = `
+Object {
+  "data": Array [
+    Object {
+      "id": "1",
+      "type": "related-type",
+    },
+    Object {
+      "id": "2",
+      "type": "related-type",
+    },
+    Object {
+      "id": "3",
+      "type": "related-type",
+    },
+  ],
+  "links": Object {
+    "related": "/test-type/1/rel",
+    "self": "/test-type/1/relationships/rel",
+  },
+}
+`;
+
+exports[`Test converting to-many relationships Convert string ID to IRelationshipObject 1`] = `
+Object {
+  "data": Array [
+    Object {
+      "id": "1",
+      "type": "related-type",
+    },
+    Object {
+      "id": "2",
+      "type": "related-type",
+    },
+    Object {
+      "id": "3",
+      "type": "related-type",
+    },
+  ],
+  "links": Object {
+    "related": "/test-type/1/rel",
+    "self": "/test-type/1/relationships/rel",
+  },
+}
+`;
+
+exports[`Test converting to-one relationships Convert null to IRelationshipObject 1`] = `
+Object {
+  "data": null,
+  "links": Object {
+    "related": "/test-type/1/rel",
+    "self": "/test-type/1/relationships/rel",
+  },
+}
+`;
+
+exports[`Test converting to-one relationships Convert number ID to IRelationshipObject 1`] = `
+Object {
+  "data": Object {
+    "id": "5",
+    "type": "related-type",
+  },
+  "links": Object {
+    "related": "/test-type/1/rel",
+    "self": "/test-type/1/relationships/rel",
+  },
+}
+`;
+
+exports[`Test converting to-one relationships Convert number ILinkage to IRelationshipObject 1`] = `
+Object {
+  "data": Object {
+    "id": "5",
+    "type": "related-type",
+  },
+  "links": Object {
+    "related": "/test-type/1/rel",
+    "self": "/test-type/1/relationships/rel",
+  },
+}
+`;
+
+exports[`Test converting to-one relationships Convert string ID to IRelationshipObject 1`] = `
+Object {
+  "data": Object {
+    "id": "5",
+    "type": "related-type",
+  },
+  "links": Object {
+    "related": "/test-type/1/rel",
+    "self": "/test-type/1/relationships/rel",
+  },
+}
+`;
+
+exports[`Test converting to-one relationships Pass through ILinkage.meta 1`] = `
+Object {
+  "data": Object {
+    "id": "5",
+    "meta": Object {
+      "not": "standard",
+    },
+    "type": "related-type",
+  },
+  "links": Object {
+    "related": "/test-type/1/rel",
+    "self": "/test-type/1/relationships/rel",
+  },
+}
+`;
+
+exports[`Test converting to-one relationships Use custom links generator 1`] = `
+Object {
+  "data": Object {
+    "id": "5",
+    "type": "related-type",
+  },
+  "links": Object {
+    "self": "/test-type/1/rels/rel",
+  },
+}
+`;

@@ -13,87 +13,48 @@ const schema = {
   }
 };
 
-const itemId = '1';
+const schemaWithCustomLinks = {
+  type: 'test-type',
+  links(id) {
+    return {
+      self: {
+        href: `/v2/test-type/${id}`,
+        meta: {
+          version: 'v2'
+        }
+      }
+    };
+  }
+};
 
 describe('Test building an IResourceObject', () => {
+
   test('Let nulls pass through', () => {
-    expect(dataToResource(schema, null)).toBeNull();
+    expect(dataToResource(schema, null)).toMatchSnapshot();
   });
 
   test('Convert `empty` IResrouceData to IResourceObject', () => {
-    expect(dataToResource(schema, {
-      id: itemId,
-      type: schema.type
-    })).toEqual({
-      id: itemId,
-      type: schema.type,
-      links: { self: `/${schema.type}/${itemId}` }
-    });
+    expect(dataToResource(schema, { id: '1' })).toMatchSnapshot();
   });
 
   test('Add attributes', () => {
-    const date = new Date();
-
     expect(dataToResource(schema, {
-      id: itemId,
-      type: schema.type,
+      id: '1',
       some: 'attribute',
-      'a-date': date,
+      'a-date': new Date(1234567890123),
       'an-array-of-stuff': [1, '2', { n: '3' }]
-    })).toEqual({
-      id: itemId,
-      type: schema.type,
-      links: { self: `/${schema.type}/${itemId}` },
-      attributes: {
-        some: 'attribute',
-        'a-date': date,
-        'an-array-of-stuff': [1, '2', { n: '3' }]
-      }
-    });
+    })).toMatchSnapshot();
   });
 
   test('Add relationships', () => {
     expect(dataToResource(schema, {
-      id: itemId,
-      type: schema.type,
+      id: '1',
       rel: '5',
       'other-rel': null
-    })).toEqual({
-      id: itemId,
-      type: schema.type,
-      links: { self: `/${schema.type}/${itemId}` },
-      relationships: {
-        rel: {
-          data: {
-            type: 'related-type',
-            id: '5'
-          },
-          links: {
-            self:  `/${schema.type}/${itemId}/relationships/rel`,
-            related: `/${schema.type}/${itemId}/rel`
-          }
-        },
-        'other-rel': {
-          data: null,
-          links: {
-            self:  `/${schema.type}/${itemId}/relationships/other-rel`,
-            related: `/${schema.type}/${itemId}/other-rel`
-          }
-        }
-      }
-    });
+    })).toMatchSnapshot();
   });
 
   test('Use custom `links` generation', () => {
-    expect(dataToResource({
-      type: 'test-type',
-      links({ id }: { id: string; }) {
-        return { self: { href: `/v2/test-type/${id}`, meta: { version: 'v2' } } };
-      }
-    }, { id: itemId, type: schema.type })).toEqual({
-      id: itemId,
-      type: schema.type,
-      links: { self: { href: `/v2/test-type/${itemId}`, meta: { version: 'v2' } } }
-    });
+    expect(dataToResource(schemaWithCustomLinks, { id: '1' })).toMatchSnapshot();
   });
 });

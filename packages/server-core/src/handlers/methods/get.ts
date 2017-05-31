@@ -363,7 +363,7 @@ function getResourceDocument(requestParams: IGetOneRequestParams): PromiseLike<I
       if (resource.links) {
         top.links = { self: resource.links.self };
       }
-      return top;
+      return includeRelatedResources(requestParams, top);
     });
 }
 
@@ -374,12 +374,12 @@ function getResourcesDocument(requestParams: IGetAllRequestParams): PromiseLike<
   return bluebird.try(() => modelForType(models, type))
     .then(model => getResources(model, null, fields, requestParams.filters, requestParams.sorts, rest)
       .then(resources => {
-         return {
-          links: model.schema.links ? model.schema.links({ id: false }) : {
+         return includeRelatedResources(requestParams, {
+          links: model.schema.links ? model.schema.links() : {
             self: `/${type}`
           },
           data: resources
-        } as ISuccessResourceDocument;
+        });
       }));
 }
 

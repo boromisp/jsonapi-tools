@@ -1,0 +1,78 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Test building an IResourceObject Add attributes 1`] = `
+Object {
+  "attributes": Object {
+    "a-date": 2009-02-13T23:31:30.123Z,
+    "an-array-of-stuff": Array [
+      1,
+      "2",
+      Object {
+        "n": "3",
+      },
+    ],
+    "some": "attribute",
+  },
+  "id": "1",
+  "links": Object {
+    "self": "/test-type/1",
+  },
+  "type": "test-type",
+}
+`;
+
+exports[`Test building an IResourceObject Add relationships 1`] = `
+Object {
+  "id": "1",
+  "links": Object {
+    "self": "/test-type/1",
+  },
+  "relationships": Object {
+    "other-rel": Object {
+      "data": null,
+      "links": Object {
+        "related": "/test-type/1/other-rel",
+        "self": "/test-type/1/relationships/other-rel",
+      },
+    },
+    "rel": Object {
+      "data": Object {
+        "id": "5",
+        "type": "related-type",
+      },
+      "links": Object {
+        "related": "/test-type/1/rel",
+        "self": "/test-type/1/relationships/rel",
+      },
+    },
+  },
+  "type": "test-type",
+}
+`;
+
+exports[`Test building an IResourceObject Convert \`empty\` IResrouceData to IResourceObject 1`] = `
+Object {
+  "id": "1",
+  "links": Object {
+    "self": "/test-type/1",
+  },
+  "type": "test-type",
+}
+`;
+
+exports[`Test building an IResourceObject Let nulls pass through 1`] = `null`;
+
+exports[`Test building an IResourceObject Use custom \`links\` generation 1`] = `
+Object {
+  "id": "1",
+  "links": Object {
+    "self": Object {
+      "href": "/v2/test-type/1",
+      "meta": Object {
+        "version": "v2",
+      },
+    },
+  },
+  "type": "test-type",
+}
+`;
