@@ -8,10 +8,14 @@ export default class CustomError extends Error implements IExtendedError {
 
     Error.captureStackTrace(this, this.constructor);
 
-    this.name = this.constructor.name;
+    // this.name = this.constructor.name;
 
     if (status) {
       this.status = status;
     }
+  }
+
+  get name() {
+    return `${this.constructor.name}(${this.status})`;
   }
 }

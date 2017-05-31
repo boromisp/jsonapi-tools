@@ -4,12 +4,6 @@ import get, { IGetOneRequestParams, IGetAllRequestParams } from '../get';
 import { ISuccessResponseObject } from '../../../types/utils';
 import { IModel, IModels, ISchema } from '../../../types/model';
 
-import serializers from '../../../__test_utils__/custom-serializers';
-
-for (const serializer of serializers) {
-  expect.addSnapshotSerializer(serializer);
-}
-
 function mockModel(schema: IModel['schema'] | string, empty?: boolean): IModel {
   return {
     schema: typeof schema === 'string' ? { type: schema } : schema,
