@@ -576,23 +576,9 @@ Object {
     ],
     "included": Array [
       Object {
-        "id": "95",
+        "id": "75",
         "links": Object {
-          "self": "/other-type/95",
-        },
-        "type": "other-type",
-      },
-      Object {
-        "id": "90",
-        "links": Object {
-          "self": "/other-type/90",
-        },
-        "type": "other-type",
-      },
-      Object {
-        "id": "85",
-        "links": Object {
-          "self": "/other-type/85",
+          "self": "/other-type/75",
         },
         "type": "other-type",
       },
@@ -604,9 +590,23 @@ Object {
         "type": "other-type",
       },
       Object {
-        "id": "75",
+        "id": "85",
         "links": Object {
-          "self": "/other-type/75",
+          "self": "/other-type/85",
+        },
+        "type": "other-type",
+      },
+      Object {
+        "id": "90",
+        "links": Object {
+          "self": "/other-type/90",
+        },
+        "type": "other-type",
+      },
+      Object {
+        "id": "95",
+        "links": Object {
+          "self": "/other-type/95",
         },
         "type": "other-type",
       },

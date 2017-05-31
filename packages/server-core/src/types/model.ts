@@ -2,7 +2,8 @@ import {
   IResourceLinks,
   IRelationshipLinks,
   IResourceIdentifierObject,
-  IJSONObject
+  IJSONObject,
+  // IJSONValue
 } from 'jsonapi-types';
 
 export interface ISchemaBase {
@@ -22,7 +23,7 @@ export interface ISchema extends ISchemaBase {
 
 export interface IDataLinkage {
   id: string | number;
-  meta?: any;
+  meta?: IJSONObject;
 }
 
 export type ILinkage = IDataLinkage | string | number;
@@ -34,12 +35,12 @@ export function isDataLinkage(linkage: ILinkage): linkage is IDataLinkage {
 export interface ILinkageData {
   type: string;
   id: string;
-  meta?: any;
+  meta?: IJSONObject;
 }
 
 export interface IResourceData {
   id: string;
-  meta?: any;
+  meta?: IJSONObject;
   [key: string]: any;
 }
 

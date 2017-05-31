@@ -2,24 +2,54 @@ import 'jest';
 
 import get, { IGetOneRequestParams, IGetAllRequestParams } from '../get';
 import { ISuccessResponseObject } from '../../../types/utils';
-import { IModel, IModels, ISchema } from '../../../types/model';
+import { IModel, IModels, ISchema, IResourceData } from '../../../types/model';
 
-function mockModel(schema: IModel['schema'] | string, empty?: boolean): IModel {
-  return {
-    schema: typeof schema === 'string' ? { type: schema } : schema,
-    getOne({ id }) {
-      return Promise.resolve(empty ? null : { id });
-    },
-    getSome({ ids }) {
-      return empty ? Promise.resolve([]) : Promise.all(ids.map(id => this.getOne({ id })));
-    },
-    getAll() {
-      return this.getSome({ ids: ['1', '2', '3', '4', '5'] });
-    },
-    update() { return Promise.resolve(null); },
-    create() { return Promise.resolve({ id: '1' }); },
-    delete() { return Promise.resolve(true); }
-  };
+class MockModel implements IModel {
+  public schema: ISchema;
+  private _data: IResourceData[];
+  private _maxId: number;
+
+  constructor(schema: ISchema, data: IResourceData[] = []) {
+    this.schema = schema;
+    this._data = data;
+    this._maxId = data.reduce((maxId, row) => Math.max(maxId, Number(row.id)), 0);
+  }
+
+  public async getOne({ id }) {
+    return this._data.find(row => row.id === id) || null;
+  }
+
+  public async getSome({ ids }) {
+    return this._data.filter(row => ids.some(id => row.id === id));
+  }
+
+  public async getAll() {
+    return this._data;
+  }
+
+  public async create({ data }) {
+    this._maxId += 1;
+    const row = Object.assign({ id: String(this._maxId) }, data);
+    this._data.push(row);
+    return row;
+  }
+
+  public async update({ id, data }) {
+    const row = await this.getOne({ id });
+    if (row) {
+      return Object.assign(row, data);
+    }
+    return false;
+  }
+
+  public async delete({ id }) {
+    const i = this._data.findIndex(row => row.id === id);
+    if (i === -1) {
+      return false;
+    }
+    this._data.splice(i, 1);
+    return true;
+  }
 }
 
 function buildModels(...args: IModel[]): IModels {
@@ -51,7 +81,7 @@ describe('Test getting a single resource', () => {
   });
 
   test('Throws 404 if null returned', () => {
-    requestParams.models = buildModels(mockModel('my-type', true));
+    requestParams.models = buildModels(new MockModel({ type: 'my-type' }));
 
     expect.assertions(1);
     return get(requestParams).then(null,
@@ -59,84 +89,79 @@ describe('Test getting a single resource', () => {
   });
 
   test('Creates response document on success', () => {
-    requestParams.models = buildModels(mockModel('my-type'));
+    requestParams.models = buildModels(new MockModel({ type: 'my-type' }, [{ id: '1' }]));
 
     expect.assertions(1);
     return get(requestParams).then(doc => expect(doc).toMatchSnapshot());
   });
 
   test('Throws on invalid include', () => {
-    const model1 = mockModel({
-      type: 'my-type',
-      relationships: {
-        rel1: {
-          type: 'other-type'
+    requestParams.models = buildModels(
+      new MockModel({
+        type: 'my-type',
+        relationships: {
+          rel1: { type: 'other-type' }
         }
-      }
-    });
-    requestParams.models = buildModels(model1, mockModel('other-type'));
+      }, [{ id: '1' }]),
+      new MockModel({ type: 'other-type' })
+    );
     requestParams.includes = { rel1: { rel2: {} } };
     expect.assertions(1);
     return get(requestParams).then(null, error => expect(error).toMatchSnapshot());
   });
 
   test('Includes related resource', () => {
-    const model1 = mockModel({
-      type: 'my-type',
-      relationships: {
-        rel1: {
-          type: 'other-type'
+    requestParams.models = buildModels(
+      new MockModel({
+        type: 'my-type',
+        relationships: {
+          rel1: {  type: 'other-type' }
         }
-      }
-    });
-    model1.getOne = ({ id }) => Promise.resolve({ id, rel1: '1' });
-    requestParams.models = buildModels(model1, mockModel('other-type'));
+      }, [{ id: '1', rel1: '1' }]),
+      new MockModel({ type: 'other-type' }, [{ id: '1' }])
+    );
     requestParams.includes = { rel1: {} };
     expect.assertions(1);
     return get(requestParams).then(doc => expect(doc).toMatchSnapshot());
   });
 
   test('Includes related resources', () => {
-    const model1 = mockModel({
-      type: 'my-type',
-      relationships: {
-        rel1: {
-          type: 'other-type'
+    requestParams.models = buildModels(
+      new MockModel({
+        type: 'my-type',
+        relationships: {
+          rel1: { type: 'other-type' }
         }
-      }
-    });
-    model1.getOne = ({ id }) => Promise.resolve({ id, rel1: ['1', '2', '3'] });
-    requestParams.models = buildModels(model1, mockModel('other-type'));
+      }, [{ id: '1', rel1: ['1', '2', '3'] }]),
+      new MockModel({ type: 'other-type' }, [{ id: '1' }, { id: '2' }, { id: '3' }])
+    );
     requestParams.includes = { rel1: {} };
     expect.assertions(1);
     return get(requestParams).then(doc => expect(doc).toMatchSnapshot());
   });
 
   test('Sets null relationship data', () => {
-    const model1 = mockModel({
-      type: 'my-type',
-      relationships: {
-        rel1: {
-          type: 'other-type'
+    requestParams.models = buildModels(
+      new MockModel({
+        type: 'my-type',
+        relationships: {
+          rel1: {  type: 'other-type' }
         }
-      }
-    });
-    model1.getOne = ({ id }) => Promise.resolve({ id, rel1: null });
-    requestParams.models = buildModels(model1, mockModel('other-type'));
+      }, [{ id: '1', rel1: null }]),
+      new MockModel({ type: 'other-type' })
+    );
     requestParams.includes = { rel1: {} };
     expect.assertions(1);
     return get(requestParams).then(doc => expect(doc).toMatchSnapshot());
   });
 
   test('Includes attributes', () => {
-    const model = mockModel('my-type');
-    model.getOne = ({ id }) => Promise.resolve({
-      id,
+    requestParams.models = buildModels(new MockModel({ type: 'my-type' }, [{
+      id: '1',
       attr: '1',
       field: ['2', '3'],
       foo: { bar: new Date(1234567890123) }
-    });
-    requestParams.models = buildModels(model);
+    }]));
     expect.assertions(1);
     return get(requestParams).then(doc => expect(doc).toMatchSnapshot());
   });
@@ -166,80 +191,82 @@ describe('Test getting all resources', () => {
   });
 
   test('Returns body with empty data array if no items found', () => {
-    requestParams.models = buildModels(mockModel('my-type', true));
+    requestParams.models = buildModels(new MockModel({ type: 'my-type' }));
 
     expect.assertions(1);
     return get(requestParams).then(doc => expect(doc).toMatchSnapshot());
   });
 
   test('Returns body with all items found', () => {
-    requestParams.models = buildModels(mockModel('my-type'));
+    requestParams.models = buildModels(new MockModel({
+      type: 'my-type'
+    }, [1, 2, 3, 4, 5].map(n => ({ id: String(n) }))));
 
     expect.assertions(1);
     return get(requestParams).then(doc => expect(doc).toMatchSnapshot());
   });
 
   test('Includes related resource', () => {
-    const model1 = mockModel({
-      type: 'my-type',
-      relationships: {
-        rel1: {
-          type: 'other-type'
+    requestParams.models = buildModels(
+      new MockModel({
+        type: 'my-type',
+        relationships: {
+          rel1: { type: 'other-type' }
         }
-      }
-    });
-    model1.getOne = ({ id }) => Promise.resolve({ id, rel1: String(100 - Number(id)) });
-    requestParams.models = buildModels(model1, mockModel('other-type'));
+      }, [1, 2, 3, 4, 5].map(n => ({ id: String(n), rel1: String(100 - n) }))),
+      new MockModel({
+        type: 'other-type'
+      }, [99, 98, 97, 96, 95].map(n => ({ id: String(n) })))
+    );
     requestParams.includes = { rel1: {} };
     expect.assertions(1);
     return get(requestParams).then(doc => expect(doc).toMatchSnapshot());
   });
 
   test('Includes related resources', () => {
-    const model1 = mockModel({
-      type: 'my-type',
-      relationships: {
-        rel1: {
-          type: 'other-type'
+    requestParams.models = buildModels(
+      new MockModel({
+        type: 'my-type',
+        relationships: {
+          rel1: { type: 'other-type' }
         }
-      }
-    });
-    model1.getOne = ({ id }) => Promise.resolve({ id, rel1: [
-      String(100 - Number(id) * 5),
-      String(100 - Number(id) * 5),
-      String(100 - Number(id) * 5)
-    ] });
-    requestParams.models = buildModels(model1, mockModel('other-type'));
+      }, [1, 2, 3, 4, 5].map(n => ({
+        id: String(n),
+        rel1: [String(100 - 5 * n), String(100 - 5 * n), String(100 - 5 * n)]
+      }))),
+      new MockModel({
+        type: 'other-type'
+      }, Array.from(Array(100).keys()).map(n => ({ id: String(n + 1) })))
+    );
     requestParams.includes = { rel1: {} };
     expect.assertions(1);
     return get(requestParams).then(doc => expect(doc).toMatchSnapshot());
   });
 
   test('Sets null relationship data', () => {
-    const model1 = mockModel({
-      type: 'my-type',
-      relationships: {
-        rel1: {
-          type: 'other-type'
+    requestParams.models = buildModels(
+      new MockModel({
+        type: 'my-type',
+        relationships: {
+          rel1: { type: 'other-type' }
         }
-      }
-    });
-    model1.getOne = ({ id }) => Promise.resolve({ id, rel1: null });
-    requestParams.models = buildModels(model1, mockModel('other-type'));
+      }, [1, 2, 3, 4, 5].map(n => ({ id: String(n), rel1: null }))),
+      new MockModel({ type: 'other-type' })
+    );
     requestParams.includes = { rel1: {} };
     expect.assertions(1);
     return get(requestParams).then(doc => expect(doc).toMatchSnapshot());
   });
 
   test('Includes attributes', () => {
-    const model = mockModel('my-type');
-    model.getOne = ({ id }) => Promise.resolve({
-      id,
-      attr: '1',
-      field: ['2', '3'],
-      foo: { bar: new Date(1234567890123) }
-    });
-    requestParams.models = buildModels(model);
+    requestParams.models = buildModels(
+      new MockModel({ type: 'my-type' }, [1, 2, 3, 4, 5].map(n => ({
+        id: String(n),
+        attr: '1',
+        field: ['2', '3'],
+        foo: { bar: new Date(1234567890123) }
+      })))
+    );
     expect.assertions(1);
     return get(requestParams).then(doc => expect(doc).toMatchSnapshot());
   });
