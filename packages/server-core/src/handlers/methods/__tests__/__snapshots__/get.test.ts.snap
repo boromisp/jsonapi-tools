@@ -175,11 +175,11 @@ Object {
 }
 `;
 
-exports[`Test getting a single resource Throws 404 if null returned 1`] = `[CustomError: Item of type my-type with id 1 not found., status: 404]`;
+exports[`Test getting a single resource Throws 404 if null returned 1`] = `[CustomError(404): Item of type my-type with id 1 not found.]`;
 
-exports[`Test getting a single resource Throws if model not found 1`] = `[CustomError: Model for type my-type could not be found., status: 404]`;
+exports[`Test getting a single resource Throws if model not found 1`] = `[CustomError(404): Model for type my-type could not be found.]`;
 
-exports[`Test getting a single resource Throws on invalid include 1`] = `[CustomError: Invalid include. Type other-type has no relationship named rel2., status: 400]`;
+exports[`Test getting a single resource Throws on invalid include 1`] = `[CustomError(400): Invalid include. Type other-type has no relationship named rel2.]`;
 
 exports[`Test getting all resources Includes attributes 1`] = `
 Object {
@@ -772,4 +772,4 @@ Object {
 }
 `;
 
-exports[`Test getting all resources Throws if model not found 1`] = `[CustomError: Model for type my-type could not be found., status: 404]`;
+exports[`Test getting all resources Throws if model not found 1`] = `[CustomError(404): Model for type my-type could not be found.]`;
