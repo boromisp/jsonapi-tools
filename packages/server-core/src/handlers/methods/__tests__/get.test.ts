@@ -39,7 +39,6 @@ describe('Test getting a single resource', () => {
       id: '1',
       fields: null,
       includes: null,
-      page: null,
       options: {},
       models: {}
     };

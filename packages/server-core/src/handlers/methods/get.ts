@@ -22,7 +22,7 @@ import {
 } from 'jsonapi-types';
 import { IParsedQueryFields, IParsedIncludes, ISuccessResponseObject } from '../../types/utils';
 
-type IGetRest = Pick<IGetRequestParamsBase, 'method' | 'page' | 'options'>;
+type IGetRest = Pick<IGetRequestParamsBase, 'method' | 'options'>;
 
 function getResource(
   model: IModel,
@@ -42,20 +42,23 @@ function getResources(
   fields: IParsedQueryFields | null,
   filters: object | null,
   sorts: string[] | null,
+  page: object | null,
   rest: IGetRest
 ): PromiseLike<IResourceObject[]> {
   if (ids === null) {
     return model.getAll(Object.assign({
       fields: fields && fields[model.schema.type],
       filters,
-      sorts
+      sorts,
+      page
     }, rest)).then(data => data ? data.map(item => dataToResource(model.schema, item)) : []);
   } else {
     return model.getSome(Object.assign({
       ids,
       fields: fields && fields[model.schema.type],
       filters,
-      sorts
+      sorts,
+      page
     }, rest)).then(data => data ? data.map(item => dataToResource(model.schema, item)) : []);
   }
 }
@@ -172,7 +175,7 @@ function includeTier(
       return links;
     }, []);
 
-    const promises = newLinks.map(([model, ids]) => getResources(model, ids, fields, null, null, rest));
+    const promises = newLinks.map(([model, ids]) => getResources(model, ids, fields, null, null, null, rest));
     return bluebird.all(promises);
   }).then(resourceArrays => {
     for (const resources of resourceArrays) {
@@ -238,7 +241,6 @@ function getIncludedResources(
 
 export interface IGetRequestParamsBase extends IRequestParamsBase {
   method: 'get';
-  page: object | null;
   type: string;
   models: IModels;
 }
@@ -254,12 +256,14 @@ export interface IGetAllRequestParams extends IGetRequestParamsBase {
   sorts: string[] | null;
   fields: IParsedQueryFields | null;
   includes: IParsedIncludes | null;
+  page: object | null;
 }
 
 export interface IGetRelationshipRequestParams extends IGetRequestParamsBase {
   id: string;
   relationship: string;
   asLink: true;
+  page: object | null;
 }
 
 export interface IGetRelatedResourceRequestParams extends IGetAllRequestParams {
@@ -288,8 +292,8 @@ function includeRelatedResources(
   requestParams: IGetOneRequestParams | IGetAllRequestParams | IGetRelatedResourceRequestParams,
   top: ISuccessResourceDocument
 ): PromiseLike<ISuccessResourceDocument> {
-  const { models, fields, includes, options, page, method } = requestParams;
-  const rest = { options, page, method};
+  const { models, fields, includes, options, method } = requestParams;
+  const rest = { options, method};
 
   if (includes && top.data && (!Array.isArray(top.data) || top.data.length)) {
     const primary = Array.isArray(top.data) ? top.data : [top.data];
@@ -307,7 +311,7 @@ function getRelatedResourceDocument(
   requestParams: IGetRelatedResourceRequestParams
 ): PromiseLike<ISuccessResourceDocument> {
   const { models, type, fields, options, page, method, filters, sorts, id, relationship } = requestParams;
-  const rest = { options, page, method};
+  const rest = { options, method};
 
   return bluebird.try(() => modelForType(models, type))
     .then(model => getRelationshipObject(model, id, relationship, null, rest))
@@ -322,7 +326,7 @@ function getRelatedResourceDocument(
           return getResources(
             modelForType(models, relationshipObject.data[0].type),
             relationshipObject.data.map(item => item.id),
-            fields, filters, sorts,
+            fields, filters, sorts, page,
             rest
           ).then(data => { top.data = data; return top; });
         }
@@ -350,8 +354,8 @@ function getRelationshipDocument(
 }
 
 function getResourceDocument(requestParams: IGetOneRequestParams): PromiseLike<ISuccessResourceDocument> {
-  const { models, type, fields, options, page, method } = requestParams;
-  const rest = { options, page, method};
+  const { models, type, fields, options, method } = requestParams;
+  const rest = { options, method};
 
   return bluebird.try(() => modelForType(models, type))
     .then(model => getResource(model, requestParams.id, fields, rest))
@@ -372,7 +376,7 @@ function getResourcesDocument(requestParams: IGetAllRequestParams): PromiseLike<
   const rest = { options, page, method};
 
   return bluebird.try(() => modelForType(models, type))
-    .then(model => getResources(model, null, fields, requestParams.filters, requestParams.sorts, rest)
+    .then(model => getResources(model, null, fields, requestParams.filters, requestParams.sorts, page, rest)
       .then(resources => {
          return includeRelatedResources(requestParams, {
           links: model.schema.links ? model.schema.links() : {
