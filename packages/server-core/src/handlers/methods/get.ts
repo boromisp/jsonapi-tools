@@ -281,7 +281,7 @@ function isGetOneRequest(request: IGetRequestParams): request is IGetOneRequestP
   return (request as IGetOneRequestParams).id !== undefined;
 }
 
-function isRelatedRequest(
+export function isRelatedRequest(
   request: IGetRequestParams
 ): request is IGetRelationshipRequestParams | IGetRelatedResourceRequestParams {
   return isGetOneRequest(request)
