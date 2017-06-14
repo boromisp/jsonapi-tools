@@ -33,7 +33,7 @@ function getResource(
   return model.getOne(Object.assign({
     id,
     fields: fields && fields[model.schema.type]
-  }, rest)).then(data => dataToResource(model.schema, data));
+  }, rest)).then(data => data ? dataToResource(model.schema, data) : null);
 }
 
 function getResources(
@@ -51,7 +51,7 @@ function getResources(
       filters,
       sorts,
       page
-    }, rest)).then(data => data ? data.map(item => dataToResource(model.schema, item)) : []);
+    }, rest)).then(data => data.map(item => dataToResource(model.schema, item)));
   } else {
     return model.getSome(Object.assign({
       ids,

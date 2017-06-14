@@ -43,7 +43,7 @@ function updateResource(model: IModel, id: string, body: IUpdateResourceDocument
     } else if (data === true) {
       return null;
     }
-    return dataToResource(model.schema, data);
+    return data ? dataToResource(model.schema, data) : null;
   });
 }
 

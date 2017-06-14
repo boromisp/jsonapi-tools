@@ -60,8 +60,6 @@ Object {
 }
 `;
 
-exports[`Test building an IResourceObject Let nulls pass through 1`] = `null`;
-
 exports[`Test building an IResourceObject Use custom \`links\` generation 1`] = `
 Object {
   "id": "1",

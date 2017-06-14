@@ -29,10 +29,6 @@ const schemaWithCustomLinks = {
 
 describe('Test building an IResourceObject', () => {
 
-  test('Let nulls pass through', () => {
-    expect(dataToResource(schema, null)).toMatchSnapshot();
-  });
-
   test('Convert `empty` IResrouceData to IResourceObject', () => {
     expect(dataToResource(schema, { id: '1' })).toMatchSnapshot();
   });
