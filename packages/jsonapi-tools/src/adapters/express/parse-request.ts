@@ -108,6 +108,7 @@ export default function(req: IJSONAPIRequest, customUrlIsLink?: (url: string) =>
     sorts: parseSortQuery(sort),
     page: page || null,
     includes: parseIncludeQuery(include),
-    body
+    body,
+    models: options.models
   };
 }
