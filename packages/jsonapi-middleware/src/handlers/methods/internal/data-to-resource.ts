@@ -5,11 +5,7 @@ import dataToLinkage from './data-to-linkage';
 import { ISchema, IResourceData } from '../../../types/model';
 import { IResourceObject } from 'jsonapi-types';
 
-export default function dataToResource(schema: ISchema, data: IResourceData | null): IResourceObject | null {
-  if (!data) {
-    return null;
-  }
-
+export default function dataToResource(schema: ISchema, data: IResourceData): IResourceObject {
   const resource: IResourceObject = {
     links: schema.links ? schema.links(data.id) : {
       self: `/${schema.type}/${data.id}`

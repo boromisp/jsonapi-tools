@@ -1,0 +1,31 @@
+0 silly input [ 'updated' ]
+1 silly flags { _: [ 'updated' ], sort: true, json: false, concurrency: 4 }
+2 verbose rootPath C:\Users\petib\Documents\Projects\jsonapi-tools
+3 info version 2.0.0-rc.5
+4 silly isInitialized
+5 silly isInitialized true
+6 silly existsSync C:\Users\petib\Documents\Projects\jsonapi-tools\VERSION
+7 silly initialize attempt
+8 silly getUpdates
+9 info Checking for updated packages...
+10 silly hasTags
+11 verbose hasTags true
+12 silly getLastTag
+13 verbose getLastTag vundefined
+14 info Comparing with tag vundefined
+15 silly getLastTaggedCommitInBranch
+16 silly getLastTag
+17 verbose getLastTag vundefined
+18 verbose getLastTaggedCommitInBranch 49d13cdeb42abadf3b16404c72eb73e9ab8a118e
+19 silly describeTag 49d13cdeb42abadf3b16404c72eb73e9ab8a118e
+20 silly describeTag vundefined
+21 silly diffSinceIn vundefined C:\Users\petib\Documents\Projects\jsonapi-tools\packages\denormalize-jsonapi
+22 silly diff
+23 silly diffSinceIn vundefined C:\Users\petib\Documents\Projects\jsonapi-tools\packages\jsonapi-types
+24 silly diff
+25 silly diffSinceIn vundefined C:\Users\petib\Documents\Projects\jsonapi-tools\packages\server-core
+26 silly diff
+27 silly collectDependents
+28 silly collectUpdates
+29 info No packages need updating
+30 verbose initialize exited early
