@@ -6,7 +6,6 @@
     "name": "Peter Boromissza",
     "email": "p.boromissza@mohanet.com"
   },
-  "private": true,
   "main": "lib/adapters/local/index.js",
   "typings": "lib/adapters/local/index.d.ts",
   "scripts": {
