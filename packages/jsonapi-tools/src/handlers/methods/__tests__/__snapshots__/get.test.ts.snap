@@ -274,6 +274,9 @@ Object {
     "links": Object {
       "self": "/my-type",
     },
+    "meta": Object {
+      "count": 5,
+    },
   },
   "status": 200,
 }
@@ -418,6 +421,9 @@ Object {
     ],
     "links": Object {
       "self": "/my-type",
+    },
+    "meta": Object {
+      "count": 5,
     },
   },
   "status": 200,
@@ -614,6 +620,9 @@ Object {
     "links": Object {
       "self": "/my-type",
     },
+    "meta": Object {
+      "count": 5,
+    },
   },
   "status": 200,
 }
@@ -661,6 +670,9 @@ Object {
     ],
     "links": Object {
       "self": "/my-type",
+    },
+    "meta": Object {
+      "count": 5,
     },
   },
   "status": 200,
@@ -766,6 +778,9 @@ Object {
     ],
     "links": Object {
       "self": "/my-type",
+    },
+    "meta": Object {
+      "count": 5,
     },
   },
   "status": 200,

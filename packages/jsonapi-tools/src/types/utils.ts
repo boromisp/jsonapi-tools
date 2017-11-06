@@ -2,7 +2,10 @@ import { ISuccessDocument, IErrorDocument } from 'jsonapi-types';
 
 export interface IExtendedError extends Error {
   status: number;
-  source?: string;
+  source?: {
+    pointer?: string;
+    parameter?: string;
+  };
   code?: number | string;
   title?: string;
 }

@@ -24,7 +24,7 @@ export default function dataToResource(schema: ISchema, data: IResourceData): IR
         relationships = {};
       }
       relationships[key] = dataToLinkage(relatedSchema, data[key], schema.type, data.id, key);
-    } else if (key !== 'id' && key !== 'type') {
+    } else if (key !== 'id' && key !== 'type' && key !== '__count') {
       if (!attributes) {
         attributes = {};
       }

@@ -36,6 +36,10 @@ function getResource(
   }, rest)).then(data => data ? dataToResource(model.schema, data) : null);
 }
 
+interface IResourceObjects extends Array<IResourceObject> {
+  $count?: number
+}
+
 function getResources(
   model: IModel,
   ids: string[] | null,
@@ -44,14 +48,20 @@ function getResources(
   sorts: string[] | null,
   page: object | null,
   rest: IGetRest
-): PromiseLike<IResourceObject[]> {
+): PromiseLike<IResourceObjects> {
   if (ids === null) {
     return model.getAll(Object.assign({
       fields: fields && fields[model.schema.type],
       filters,
       sorts,
       page
-    }, rest)).then(data => data.map(item => dataToResource(model.schema, item)));
+    }, rest)).then(data => {
+      const resources: IResourceObjects = data.map(item => dataToResource(model.schema, item));
+      if (data.length && data[0].__count) {
+        resources.$count = data[0].__count;
+      }
+      return resources;
+    });
   } else {
     return model.getSome(Object.assign({
       ids,
@@ -59,7 +69,16 @@ function getResources(
       filters,
       sorts,
       page
-    }, rest)).then(data => data ? data.map(item => dataToResource(model.schema, item)) : []);
+    }, rest)).then(data => {
+      if (data) {
+        const resources: IResourceObjects = data.map(item => dataToResource(model.schema, item));
+        if (data.length && data[0].__count) {
+          resources.$count = data[0].__count;
+        }
+        return resources;
+      }
+      return [];
+    });
   }
 }
 
@@ -328,7 +347,13 @@ function getRelatedResourceDocument(
             relationshipObject.data.map(item => item.id),
             fields, filters, sorts, page,
             rest
-          ).then(data => { top.data = data; return top; });
+          ).then(data => {
+            top.data = data;
+            if (typeof data.$count !== 'undefined') {
+              top.meta = { count: data.$count || data.length };
+            }
+            return top;
+          });
         }
         top.data = [];
       } else if (relationshipObject.data) {
@@ -376,13 +401,14 @@ function getResourcesDocument(requestParams: IGetAllRequestParams): PromiseLike<
   const rest = { options, page, method};
 
   return bluebird.try(() => modelForType(models, type))
-    .then(model => getResources(model, null, fields, requestParams.filters, requestParams.sorts, page, rest)
+    .then((model: IModel) => getResources(model, null, fields, requestParams.filters, requestParams.sorts, page, rest)
       .then(resources => {
          return includeRelatedResources(requestParams, {
           links: model.schema.links ? model.schema.links() : {
             self: `/${type}`
           },
-          data: resources
+          data: resources,
+          ...(typeof resources.$count === 'undefined' ? null : { meta: { count: resources.$count || resources.length } })
         });
       }));
 }
