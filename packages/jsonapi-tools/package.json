@@ -1,6 +1,7 @@
 {
   "name": "jsonapi-tools",
   "version": "1.1.1",
+  "license": "ISC",
   "description": "",
   "author": {
     "name": "Peter Boromissza",
@@ -17,15 +18,15 @@
   "dependencies": {
     "@types/bluebird": "^3.5.4",
     "@types/express": "^4.0.35",
-    "@types/jest": "^19.2.3",
-    "@types/node": "^7.0.22",
+    "@types/jest": "21.1.5",
+    "@types/node": "8.0.47",
     "bluebird": "^3.4",
     "denormalize-jsonapi": "^1.1.0",
     "jsonapi-types": "^1.0.0"
   },
   "devDependencies": {
-    "jest": "^20.0.4",
-    "ts-jest": "^20.0.5",
+    "jest": "21.2.1",
+    "ts-jest": "21.1.4",
     "tslint": "^5.3.2",
     "typescript": "^2.3.3"
   },

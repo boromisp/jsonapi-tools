@@ -18,7 +18,7 @@ import { IRequestParamsBase } from './types/request-params';
 
 type IUpdateRest = Pick<IUpdateRequestParamsBase, 'method' | 'options'>;
 
-function updateResource(model: IModel, id: string, body: IUpdateResourceDocument, rest: IUpdateRest) {
+function updateResource(model: IModel, id: string, body: IUpdateResourceDocument, rest: IUpdateRest): PromiseLike<IResourceObject | null> {
   return bluebird.try(() => {
     const schema = model.schema;
     if (!model.update) {
@@ -53,7 +53,7 @@ function updateRelationship(
   relationship: string,
   body: IRelationshipObject,
   rest: IUpdateRest
-): PromiseLike<IResourceObject | null> {
+): PromiseLike<IRelationshipObject | null> {
   return bluebird.try(() => {
     const { type } = getRelatedSchema(model.schema, relationship);
     if (!model.updateRelationship) {
@@ -98,8 +98,10 @@ export default function update(requestParams: IUpdateRequestParams): PromiseLike
   const rest = { options, method };
 
   return bluebird.try(() => modelForType(models, type))
-    .then(model => isRelatedRequest(requestParams)
-      ? updateRelationship(model, id, requestParams.relationship, requestParams.body, rest)
-      : updateResource(model, id, requestParams.body, rest)
+    .then(model => (
+        isRelatedRequest(requestParams)
+        ? updateRelationship(model, id, requestParams.relationship, requestParams.body, rest)
+        : updateResource(model, id, requestParams.body, rest)
+      ) as PromiseLike<IResourceObject | IRelationshipObject | null>
     ).then(top => top ? { status: 200, body: top } : { status: 204 });
 }

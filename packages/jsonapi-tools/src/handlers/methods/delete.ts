@@ -22,7 +22,7 @@ function deleteFromRelationship(
   relationship: string,
   body: IRelationshipObject | null,
   rest: IDeleteRest
-): PromiseLike<void> {
+): PromiseLike<any> {
   return bluebird.try(() => {
     const { type } = getRelatedSchema(model.schema, relationship);
     if (!model.deleteFromRelationship) {

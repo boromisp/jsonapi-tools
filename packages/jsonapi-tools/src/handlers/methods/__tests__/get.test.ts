@@ -24,7 +24,10 @@ class MockModel implements IModel {
   }
 
   public async getAll() {
-    return this._data;
+    return this._data.map(item => {
+      item.__count = this._data.length;
+      return item;
+    });
   }
 
   public async create({ data }) {
