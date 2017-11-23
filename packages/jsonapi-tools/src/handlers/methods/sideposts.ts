@@ -30,7 +30,7 @@ function resourceHasUnresolvedBatchID(resource: IResourceObject) {
       }
     }
   }
-  return false;
+  return Boolean(resource.meta && (resource.meta['batch-key'] && (resource.meta.op || 'create') !== 'create') && !resource.id);
 }
 
 function tryToResolveResourceRelationships(resource: IResourceObject, results: IResourceObject[]) {
@@ -60,6 +60,15 @@ function tryToResolveResourceRelationships(resource: IResourceObject, results: I
         }
       }
     }
+    if (resource.meta && (resource.meta['batch-key'] && (resource.meta.op || 'create') !== 'create') && !resource.id) {
+      const batchKey = resource.meta && resource.meta['batch-key'];
+      const relatedResource = results.find(res => (res.meta && res.meta['batch-key']) === batchKey);
+      if (relatedResource) {
+        resource.id = relatedResource.id;
+      } else {
+        stillHasUnresolved = true;
+      }
+    }
     return !stillHasUnresolved;
   }
   return true;
@@ -85,6 +94,7 @@ function batchStep(
   models: IModels,
   resolved: IResourceObject[],
   unresolved: IResourceObject[],
+  // mainData: IResourceObject | null,
   createRest: ICreateRest,
   updateRest: IUpdateRest,
   deleteRest: IDeleteRest
@@ -133,20 +143,39 @@ function batchStep(
       }
     }
     
-    const newUnresolved = [];
-    const newResolved = [];
-    for (const resource of unresolved) {
-      if (tryToResolveResourceRelationships(resource, resultObjects)) {
-        newUnresolved.push(resource);
-      } else {
-        newResolved.push(resource);
-      }
-      if (newResolved.length === 0) {
-        throw new CustomError('Could not resolve all the side posted operations', 400);
-      }
+    let newUnresolved: IResourceObject[] = [];
+    let newResolved: IResourceObject[] = [];
+
+    const resolutions = unresolved.map(resource => tryToResolveResourceRelationships(resource, resultObjects));
+
+    const i = resolutions.indexOf(false);
+
+    if (i === 0) {
+      newUnresolved = unresolved; 
+    } else if (i === -1) {
+      newResolved = unresolved;
+    } else {
+      newResolved = unresolved.slice(0, i);
+      newUnresolved = unresolved.slice(i);
     }
-    return batchStep(models, newResolved, newUnresolved, createRest, updateRest, deleteRest)
-      .then(Array.prototype.concat.bind(results));
+
+    if (resolved.length === 0) {
+      throw new CustomError('Could not resolve all the side posted operations', 400);
+    }
+
+
+    // const resolveMain = mainData && tryToResolveResourceRelationships(mainData, resultObjects);
+    // if (resolveMain) {
+    //   newResolved = [mainData!].concat(newResolved);
+    // }
+
+    return batchStep(
+      models,
+      newResolved,
+      newUnresolved,
+      createRest,
+      updateRest,
+      deleteRest).then(Array.prototype.concat.bind(results));
   });
 }
 
@@ -163,21 +192,34 @@ export default function processIncluded(
       return [];
     }
     
-    const unresolved: IResourceObject[] = [];
-    const resolved: IResourceObject[] = [];
+    let unresolved: IResourceObject[] = [];
+    let resolved: IResourceObject[] = [];
 
-    for (const resource of included) {
-      if (resourceHasUnresolvedBatchID(resource)) {
-        unresolved.push(resource);
-      } else {
-        resolved.push(resource);
-      }
+    const i = included.findIndex(resource => resourceHasUnresolvedBatchID(resource));
+
+    if (i === 0) {
+      unresolved = included; 
+    } else if (i === -1) {
+      resolved = included;
+    } else {
+      resolved = included.slice(0, i);
+      unresolved = included.slice(i);
+    }
+
+    // const canResolveMain = !resourceHasUnresolvedBatchID(body.data);
+    // if (canResolveMain) {
+    //   resolved = [body.data].concat(resolved);
+    // }
+
+    if (resolved.length === 0) {
+      throw new CustomError('Could not resolve all the side posted operations', 400);
     }
 
     return batchStep(
       models,
       resolved,
       unresolved,
+      // canResolveMain ? null : body.data,
       Object.assign({ method: post }, rest),
       Object.assign({ method: patch }, rest),
       Object.assign({ method: del }, rest)
