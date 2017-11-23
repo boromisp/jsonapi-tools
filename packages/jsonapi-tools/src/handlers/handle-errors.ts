@@ -47,5 +47,6 @@ export default function handleErrors(
     }
     errors = [{ detail: `Unknown internal error: ${errorOrErrors ? errorOrErrors.message : '<unknown>'}` }];
   }
-  return { status: errors[0].status || 500, body: { errors } };
+  throw errors;
+  // return { status: errors[0].status || 500, body: { errors } };
 }

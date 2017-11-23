@@ -11,17 +11,19 @@ import modelForType from './internal/model-for-type';
 import CustomError from '../../utils/custom-error';
 
 import { IModel, IModels } from '../../types/model';
-import { IRelationshipObject, IUpdateResourceDocument, IResourceObject } from 'jsonapi-types';
+import { IRelationshipObject, IUpdateResourceDocument, IResourceObject, ICreateResponseDocument } from 'jsonapi-types';
 import { ISuccessResponseObject } from '../../types/utils';
 import { IRequestParamsBase } from './types/request-params';
 
-type ICreateRest = Pick<ICreateRequestParamsBase, 'method' | 'options'>;
+import processIncluded from './sideposts';
 
-function createResource(
+export type ICreateRest = Pick<ICreateRequestParamsBase, 'method' | 'options'>;
+
+export function createResourceObject(
   model: IModel,
   body: IUpdateResourceDocument,
   rest: ICreateRest
-): PromiseLike<ISuccessResponseObject> {
+) {
   return bluebird.try(() => {
     const schema = model.schema;
     if (!body || !body.data) {
@@ -35,13 +37,30 @@ function createResource(
     }
     return model.create(Object.assign({
       data: Object.assign({}, body.data.attributes!, body.data.relationships!)
-    }, rest));
-  }).then(data => {
-    const resource = dataToResource(model.schema, data) as IResourceObject;
+    }, rest)).then(data => dataToResource(model.schema, data));
+  });
+}
+
+function createResource(
+  model: IModel,
+  body: IUpdateResourceDocument,
+  rest: ICreateRest,
+  included?: Array<IResourceObject | null>
+): PromiseLike<ISuccessResponseObject> {
+  return createResourceObject(model, body, rest).then(resource => {
+    const body: ICreateResponseDocument = {
+      data: resource
+    };
+
+    if (included && included.length) {
+      body.included = included;
+    }
+
     const response: ISuccessResponseObject = {
       status: 201,
-      body: { data: resource }
+      body
     };
+    
     const selfLink = resource.links && resource.links.self;
     if (selfLink) {
       response.headers = {
@@ -51,6 +70,18 @@ function createResource(
       };
     }
     return response;
+  });
+}
+
+function createResourceWithIncluded(
+  models: IModels,
+  type: string,
+  body: IUpdateResourceDocument,
+  rest: ICreateRest
+): PromiseLike<ISuccessResponseObject> {
+  return processIncluded(models, body, rest).then(included => {
+    const model = modelForType(models, type);
+    return createResource(model, body, rest, included);
   });
 }
 
@@ -107,8 +138,9 @@ export default function create(requestParams: ICreateRequestParams): PromiseLike
   const { type, models, options, method } = requestParams;
   const rest = { options, method };
 
-  return bluebird.try(() => modelForType(models, type))
-    .then(model => isRelatedRequest(requestParams)
-      ? addToRelationship(model, requestParams.id, requestParams.relationship, requestParams.body, rest)
-      : createResource(model, requestParams.body, rest));
+  if (isRelatedRequest(requestParams)) {
+    return bluebird.try(() => modelForType(models, type))
+      .then(model => addToRelationship(model, requestParams.id, requestParams.relationship, requestParams.body, rest));
+  }
+  return createResourceWithIncluded(models, type, requestParams.body, rest);
 }
