@@ -14,7 +14,7 @@ import { ISuccessResponseObject } from '../../types/utils';
 
 import { IRequestParamsBase } from './types/request-params';
 
-type IDeleteRest = Pick<IDeleteResourceRequestParams, 'method' | 'options'>;
+export type IDeleteRest = Pick<IDeleteResourceRequestParams, 'method' | 'options'>;
 
 function deleteFromRelationship(
   model: IModel,

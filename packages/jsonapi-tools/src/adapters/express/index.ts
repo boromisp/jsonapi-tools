@@ -83,14 +83,17 @@ function sendResponse(
     responseObject = { status: 500 };
   }
 
-  res.type('application/vnd.api+json').status(responseObject.status);
-  if (responseObject.headers) {
-    res.set(responseObject.headers);
-  }
-  if (responseObject.body) {
-    res.send(responseObject.body);
-  } else {
-    res.end();
+  return function () {
+    res.type('application/vnd.api+json').status(responseObject.status);
+    if (responseObject.headers) {
+      res.set(responseObject.headers);
+    }
+    if (responseObject.body) {
+      res.send(responseObject.body);
+    } else {
+      res.end();
+    }
+    res = undefined!;
   }
 }
 
@@ -102,16 +105,17 @@ export interface IMiddlewareOptions {
 export default function createMiddleware({ urlIsLink, models }: IMiddlewareOptions) {
   const rest = { models };
 
-  return (req: IJSONAPIRequest, res: Response, next: (e: Error) => void) => {
+  return (req: IJSONAPIRequest, res: Response, /*next: (e: Error) => void*/) => {
     let errorLogger: IErrorLogger = console;
 
-    bluebird.try(() => parseRequest(req, urlIsLink)).then(request => {
+    return bluebird.try(() => parseRequest(req, urlIsLink)).then(request => {
       if (request.options.log && request.options.log.error) {
         errorLogger = request.options.log;
       }
       return handleRequest(mergeOptions(rest, request) as TypeRequestParams);
     }).then(response => sendResponse(req.baseUrl, res, response, errorLogger))
-    .catch(error => sendResponse(req.baseUrl, res, handleErrors(error, errorLogger), errorLogger))
-    .catch(next);
+    // .catch(error => sendResponse(req.baseUrl, res, handleErrors(error, errorLogger), errorLogger));
+    .catch(error => handleErrors(error, errorLogger));
+    // .catch(next);
   };
 }

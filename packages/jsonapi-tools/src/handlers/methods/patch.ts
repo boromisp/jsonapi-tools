@@ -11,14 +11,21 @@ import modelForType from './internal/model-for-type';
 import CustomError from '../../utils/custom-error';
 
 import { IModel, IModels } from '../../types/model';
-import { IResourceObject, IRelationshipObject, IUpdateResourceDocument } from 'jsonapi-types';
+import { IResourceObject, IRelationshipObject, IUpdateResourceDocument, ICreateResponseDocument } from 'jsonapi-types';
 import { ISuccessResponseObject } from '../../types/utils';
 
 import { IRequestParamsBase } from './types/request-params';
 
-type IUpdateRest = Pick<IUpdateRequestParamsBase, 'method' | 'options'>;
+import processIncluded from './sideposts';
 
-function updateResource(model: IModel, id: string, body: IUpdateResourceDocument, rest: IUpdateRest): PromiseLike<IResourceObject | null> {
+export type IUpdateRest = Pick<IUpdateRequestParamsBase, 'method' | 'options'>;
+
+export function updateResourceObject(
+  model: IModel,
+  id: string,
+  body: IUpdateResourceDocument,
+  rest: IUpdateRest
+) {
   return bluebird.try(() => {
     const schema = model.schema;
     if (!model.update) {
@@ -101,7 +108,15 @@ export default function update(requestParams: IUpdateRequestParams): PromiseLike
     .then(model => (
         isRelatedRequest(requestParams)
         ? updateRelationship(model, id, requestParams.relationship, requestParams.body, rest)
-        : updateResource(model, id, requestParams.body, rest)
+        : processIncluded(models, requestParams.body, rest).then(included => {
+          return updateResourceObject(model, id, requestParams.body, rest).then(data => {
+            const top: ICreateResponseDocument = { data: data! };
+            if (included) {
+              top.included = included;
+            }
+            return top;
+          });
+        })
       ) as PromiseLike<IResourceObject | IRelationshipObject | null>
     ).then(top => top ? { status: 200, body: top } : { status: 204 });
 }

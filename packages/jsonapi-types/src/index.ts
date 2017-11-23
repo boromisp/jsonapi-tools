@@ -148,6 +148,7 @@ export interface IErrorRelationshipDocument extends IDocumentBase {
  */
 export interface IUpdateResourceDocument extends IDocumentBase {
   data: IResourceObject;
+  included?: IResourceObject[]
 }
 
 /**
@@ -155,6 +156,7 @@ export interface IUpdateResourceDocument extends IDocumentBase {
  */
 export interface ICreateResponseDocument extends IDocumentBase {
   data: IResourceObject;
+  included?: Array<IResourceObject | null>
 }
 
 export type ISuccessDocument =
