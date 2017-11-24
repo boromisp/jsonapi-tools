@@ -11,12 +11,12 @@ import modelForType from './internal/model-for-type';
 import CustomError from '../../utils/custom-error';
 
 import { IModel, IModels } from '../../types/model';
-import { IResourceObject, IRelationshipObject, IUpdateResourceDocument, ICreateResponseDocument } from 'jsonapi-types';
+import { IResourceObject, IRelationshipObject, IUpdateResourceDocument } from 'jsonapi-types';
 import { ISuccessResponseObject } from '../../types/utils';
 
 import { IRequestParamsBase } from './types/request-params';
 
-import processIncluded from './sideposts';
+// import processIncluded from './sideposts';
 
 export type IUpdateRest = Pick<IUpdateRequestParamsBase, 'method' | 'options'>;
 
@@ -33,6 +33,9 @@ export function updateResourceObject(
     }
     if (!body || !body.data) {
       throw new CustomError('The updates for the resource object must be provided in the request body.', 400);
+    }
+    if (Array.isArray(body.data)) {
+      throw new CustomError('Cannot update resource with array body.', 400);
     }
     if (body.data.type !== schema.type || body.data.id !== id) {
       throw new CustomError('Id or type mismatch.', 409);
@@ -108,15 +111,7 @@ export default function update(requestParams: IUpdateRequestParams): PromiseLike
     .then(model => (
         isRelatedRequest(requestParams)
         ? updateRelationship(model, id, requestParams.relationship, requestParams.body, rest)
-        : processIncluded(models, requestParams.body, rest).then(included => {
-          return updateResourceObject(model, id, requestParams.body, rest).then(data => {
-            const top: ICreateResponseDocument = { data: data! };
-            if (included) {
-              top.included = included;
-            }
-            return top;
-          });
-        })
+        : updateResourceObject(model, id, requestParams.body, rest).then(data => ({ data }))
       ) as PromiseLike<IResourceObject | IRelationshipObject | null>
     ).then(top => top ? { status: 200, body: top } : { status: 204 });
 }

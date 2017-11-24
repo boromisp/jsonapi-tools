@@ -1,6 +1,6 @@
 import {
   IResourceIdentifierObject,
-  IResourceObject,
+  IResourceObjectBase,
   IDocumentBase,
   IResponseDocument,
   IErrorDocument,
@@ -26,7 +26,7 @@ export interface IDenormalizedResource {
 }
 
 function transformResource(
-  res: IResourceObject, findIncluded: ResourceLookup, include?: Array<string | string[]>
+  res: IResourceObjectBase, findIncluded: ResourceLookup, include?: Array<string | string[]>
 ): IDenormalizedResource {
   const attributes = res.attributes;
   const relationships = res.relationships;
@@ -73,18 +73,18 @@ function transformResource(
 interface IItemCache {
   [type: string]: {
     [id: string]:
-    IResourceObject | IResourceIdentifierObject
+    IResourceObjectBase | IResourceIdentifierObject
   };
 }
 
 type ResourceLookup = (rel: IResourceIdentifierObject | null)
-  => IResourceIdentifierObject | IResourceObject | string | null;
+  => IResourceIdentifierObject | IResourceObjectBase | string | null;
 
 /*
 * Uses linear search under 10000 items, and objects otherwise
 */
 function createResourceLookup(
-  resources: Array<IResourceObject | IResourceIdentifierObject>
+  resources: Array<IResourceObjectBase | IResourceIdentifierObject>
 ): ResourceLookup {
   if (resources.length < 10000) {
     return (rel: IResourceIdentifierObject | null) => {
@@ -105,7 +105,7 @@ function createResourceLookup(
       if (!ids) {
         ids = types[item.type] = {};
       }
-      ids[item.id] = item;
+      ids[item.id!] = item;
     }
 
     return (rel: IResourceIdentifierObject | null) => {
@@ -149,10 +149,19 @@ export default function(
     }
 
     if (isSuccess(top)) {
-      let resources: Array<IResourceObject | IResourceIdentifierObject> = [];
-      resources = resources.concat(top.data || []);
+      let resources: Array<IResourceObjectBase | IResourceIdentifierObject> = [];
+      const validData = [];
+      if (Array.isArray(top.data)) {
+        for (const item of top.data) {
+          if (item !== null) {
+            validData.push(item);
+          }
+        }
+      } else if (top.data) {
+        validData.push(top.data);
+      }
       if (hasIncluded(top)) {
-        resources = resources.concat(top.included || []);
+        resources = validData.concat(top.included || []);
       }
 
       const findIncluded = include ? createResourceLookup(resources) : mapRelation;
@@ -166,7 +175,7 @@ export default function(
 
       if (top.data) {
         if (Array.isArray(top.data)) {
-          for (const item of top.data) {
+          for (const item of validData) {
             transformResource(item, findIncluded, include);
           }
           out.data = top.data as IDenormalizedResource[];

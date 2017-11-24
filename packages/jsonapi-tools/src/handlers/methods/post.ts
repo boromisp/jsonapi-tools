@@ -11,11 +11,11 @@ import modelForType from './internal/model-for-type';
 import CustomError from '../../utils/custom-error';
 
 import { IModel, IModels } from '../../types/model';
-import { IRelationshipObject, IUpdateResourceDocument, IResourceObject, ICreateResponseDocument } from 'jsonapi-types';
+import { IRelationshipObject, IUpdateResourceDocument, ICreateResponseDocument, IResourceObject } from 'jsonapi-types';
 import { ISuccessResponseObject } from '../../types/utils';
 import { IRequestParamsBase } from './types/request-params';
 
-import processIncluded from './sideposts';
+import processBatch from './sideposts';
 
 export type ICreateRest = Pick<ICreateRequestParamsBase, 'method' | 'options'>;
 
@@ -23,11 +23,14 @@ export function createResourceObject(
   model: IModel,
   body: IUpdateResourceDocument,
   rest: ICreateRest
-) {
+): PromiseLike<IResourceObject> {
   return bluebird.try(() => {
     const schema = model.schema;
     if (!body || !body.data) {
       throw new CustomError('The resource object of the item to be created must be provided in the request body.', 400);
+    }
+    if (Array.isArray(body.data)) {
+      throw new CustomError('Cannot create a single object with array body.', 400);
     }
     if (body.data.type !== schema.type) {
       throw new CustomError('Type mismatch.', 409);
@@ -45,16 +48,11 @@ function createResource(
   model: IModel,
   body: IUpdateResourceDocument,
   rest: ICreateRest,
-  included?: Array<IResourceObject | null>
 ): PromiseLike<ISuccessResponseObject> {
   return createResourceObject(model, body, rest).then(resource => {
     const body: ICreateResponseDocument = {
       data: resource
     };
-
-    if (included && included.length) {
-      body.included = included;
-    }
 
     const response: ISuccessResponseObject = {
       status: 201,
@@ -73,17 +71,17 @@ function createResource(
   });
 }
 
-function createResourceWithIncluded(
-  models: IModels,
-  type: string,
-  body: IUpdateResourceDocument,
-  rest: ICreateRest
-): PromiseLike<ISuccessResponseObject> {
-  return processIncluded(models, body, rest).then(included => {
-    const model = modelForType(models, type);
-    return createResource(model, body, rest, included);
-  });
-}
+// function createResourceWithIncluded(
+//   models: IModels,
+//   type: string,
+//   body: IUpdateResourceDocument,
+//   rest: ICreateRest
+// ): PromiseLike<ISuccessResponseObject> {
+//   return processIncluded(models, body, rest).then(included => {
+//     const model = modelForType(models, type);
+//     return createResource(model, body, rest, included);
+//   });
+// }
 
 function addToRelationship(
   model: IModel,
@@ -141,6 +139,13 @@ export default function create(requestParams: ICreateRequestParams): PromiseLike
   if (isRelatedRequest(requestParams)) {
     return bluebird.try(() => modelForType(models, type))
       .then(model => addToRelationship(model, requestParams.id, requestParams.relationship, requestParams.body, rest));
+  } else if (Array.isArray(requestParams.body.data)) {
+    return processBatch(models, requestParams.body.data, rest).then(data => ({
+      status: 200,
+      body: { data }
+    }));
+  } else {
+    return bluebird.try(() => modelForType(models, type))
+      .then(model => createResource(model, requestParams.body, rest));
   }
-  return createResourceWithIncluded(models, type, requestParams.body, rest);
 }

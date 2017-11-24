@@ -44,13 +44,36 @@ export interface IJSONAPIObject {
   meta?: IJSONObject;
 }
 
+export interface IBatchCreateMeta {
+  'batch-key': string,
+  op?: 'create'
+}
+
+export interface IBatchUpdateMeta {
+  'batch-key'?: string,
+  op: 'update'
+}
+
+export interface IBatchDeleteMeta {
+  'batch-key'?: string,
+  op: 'delete'
+}
+
+export type TMeta = IJSONObject | IBatchCreateMeta | IBatchUpdateMeta | IBatchDeleteMeta;
+
+export function isBatchMeta(meta?: TMeta): meta is IBatchCreateMeta | IBatchUpdateMeta | IBatchDeleteMeta {
+  return Boolean(meta && (
+    (meta as IBatchCreateMeta | IBatchUpdateMeta | IBatchDeleteMeta).op ||
+    (meta as IBatchCreateMeta | IBatchUpdateMeta | IBatchDeleteMeta)['batch-key']));
+}
+
 /**
  * http://jsonapi.org/format/1.0/#document-resource-identifier-objects
  */
 export interface IResourceIdentifierObject {
   type: string;
   id: string;
-  meta?: IJSONObject;
+  meta?: TMeta;
 }
 
 /**
@@ -70,6 +93,17 @@ export interface IRelationshipObject {
 /**
  * http://jsonapi.org/format/1.0/#document-resource-objects
  */
+export interface IResourceObjectBase {
+  id?: string;
+  type: string;
+  attributes?: IJSONObject;
+  relationships?: {
+    [field: string]: IRelationshipObject
+  };
+  links?: IResourceLinks;
+  meta?: TMeta;
+}
+
 export interface IResourceObject {
   id: string;
   type: string;
@@ -82,7 +116,11 @@ export interface IResourceObject {
     }
   };
   links?: IResourceLinks;
-  meta?: IJSONObject;
+  meta?: TMeta;
+}
+
+export interface IBatchOperation extends IResourceObjectBase {
+  meta: IBatchCreateMeta | IBatchUpdateMeta | IBatchDeleteMeta
 }
 
 /**
@@ -147,8 +185,7 @@ export interface IErrorRelationshipDocument extends IDocumentBase {
  * http://jsonapi.org/format/1.0/#crud-updating
  */
 export interface IUpdateResourceDocument extends IDocumentBase {
-  data: IResourceObject;
-  included?: IResourceObject[]
+  data: IResourceObjectBase | IBatchOperation[];
 }
 
 /**
@@ -156,13 +193,17 @@ export interface IUpdateResourceDocument extends IDocumentBase {
  */
 export interface ICreateResponseDocument extends IDocumentBase {
   data: IResourceObject;
-  included?: Array<IResourceObject | null>
+}
+
+export interface IBatchResponseDocument extends IDocumentBase {
+  data: Array<IResourceObject | null> 
 }
 
 export type ISuccessDocument =
   ISuccessResourceDocument
   | ISuccessRelationshipDocument
-  | ICreateResponseDocument;
+  | ICreateResponseDocument
+  | IBatchResponseDocument;
 
 export type IErrorDocument =
   IErrorResourceDocument
@@ -173,7 +214,8 @@ export type IResponseDocument =
   | IErrorResourceDocument
   | ISuccessRelationshipDocument
   | IErrorRelationshipDocument
-  | ICreateResponseDocument;
+  | ICreateResponseDocument
+  | IBatchResponseDocument;
 
 export type IGetResponseDocument =
   ISuccessResourceDocument
@@ -197,6 +239,6 @@ export function hasRelated(links: ILinks): links is IRelationshipLinks {
   return (links as IRelationshipLinks).related !== undefined;
 }
 
-export function hasRelationships(data: IResourceObject | IRelationshipObject): data is IResourceObject {
-  return (data as IResourceObject).relationships !== undefined;
+export function hasRelationships(data: IResourceObjectBase | IRelationshipObject): data is IResourceObjectBase {
+  return (data as IResourceObjectBase).relationships !== undefined;
 }
