@@ -9,6 +9,7 @@ import handleErrors, { IErrorLogger } from '../../handlers/handle-errors';
 import {
   IResourceObject,
   IRelationshipObject,
+  IResourceObjectBase,
   hasIncluded,
   ILinks,
   ILink,
@@ -44,11 +45,16 @@ function prefixLinks(prefix: string, links?: ILinks) {
   }
 }
 
-function prefixDataLinks(prefix: string, data: IResourceObject | IRelationshipObject) {
-  prefixLinks(prefix, data.links);
-  if (!hasRelationships(data) || !data.relationships) { return; }
-  for (const relationship of Object.keys(data.relationships)) {
-    prefixDataLinks(prefix, data.relationships[relationship]);
+/*
+  IResourceObject | IResourceIdentifierObject | IResourceObjectBase | null
+*/
+function prefixDataLinks(prefix: string, data: IResourceObject | IRelationshipObject | IResourceObjectBase | null) {
+  if (data) {
+    prefixLinks(prefix, data.links);
+    if (!hasRelationships(data) || !data.relationships) { return; }
+    for (const relationship of Object.keys(data.relationships)) {
+      prefixDataLinks(prefix, data.relationships[relationship]);
+    }
   }
 }
 
@@ -69,7 +75,9 @@ function sendResponse(
             prefixDataLinks(baseUrl, item);
           }
         } else {
-          prefixDataLinks(baseUrl, responseObject.body.data);
+          const body = responseObject.body;
+          const data = body.data;
+          prefixDataLinks(baseUrl, data as (IResourceObject | IRelationshipObject | IResourceObjectBase | null));
         }
         if (hasIncluded(responseObject.body) && responseObject.body.included) {
           for (const item of responseObject.body.included) {
