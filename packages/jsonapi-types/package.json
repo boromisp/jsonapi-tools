@@ -1,6 +1,6 @@
 {
   "name": "jsonapi-types",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "TypeScript interfaces and type guards for {json:api} types",
   "license": "MIT",
   "homepage": "https://github.com/boromisp/jsonapi-tools/tree/master/packages/jsonapi-types",
