@@ -11,11 +11,11 @@ import modelForType from './internal/model-for-type';
 import CustomError from '../../utils/custom-error';
 
 import { IModel, IModels } from '../../types/model';
-import { IRelationshipObject, IUpdateResourceDocument, ICreateResponseDocument, IResourceObject } from 'jsonapi-types';
+import { IRelationshipObject, IUpdateResourceDocument, ICreateResponseDocument, IResourceObject, IBatchResourceDocument } from 'jsonapi-types';
 import { ISuccessResponseObject } from '../../types/utils';
 import { IRequestParamsBase } from './types/request-params';
 
-import processBatch from './sideposts';
+import batch from './batch';
 
 export type ICreateRest = Pick<ICreateRequestParamsBase, 'method' | 'options'>;
 
@@ -120,16 +120,24 @@ export interface ICreateOneRequestParams extends ICreateRequestParamsBase {
   body: IUpdateResourceDocument;
 }
 
+export interface IBatchRequestParams extends ICreateRequestParamsBase {
+  body: IBatchResourceDocument;
+}
+
 export interface ICreateRelationshipRequestParams extends ICreateRequestParamsBase {
   id: string;
   relationship: string;
   body: IRelationshipObject;
 }
 
-export type ICreateRequestParams = ICreateOneRequestParams | ICreateRelationshipRequestParams;
+export type ICreateRequestParams = ICreateOneRequestParams | ICreateRelationshipRequestParams | IBatchRequestParams;
 
 function isRelatedRequest(request: ICreateRequestParams): request is ICreateRelationshipRequestParams {
   return (request as ICreateRelationshipRequestParams).relationship !== undefined;
+}
+
+function isBatchRequest(request: ICreateRequestParams): request is IBatchRequestParams {
+  return (request as IBatchRequestParams).body.batch !== undefined;
 }
 
 export default function create(requestParams: ICreateRequestParams): PromiseLike<ISuccessResponseObject> {
@@ -139,8 +147,8 @@ export default function create(requestParams: ICreateRequestParams): PromiseLike
   if (isRelatedRequest(requestParams)) {
     return bluebird.try(() => modelForType(models, type))
       .then(model => addToRelationship(model, requestParams.id, requestParams.relationship, requestParams.body, rest));
-  } else if (Array.isArray(requestParams.body.data)) {
-    return processBatch(models, requestParams.body.data, rest).then(data => ({
+  } else if (isBatchRequest(requestParams)) {
+    return batch(models, requestParams.body.batch, rest).then(data => ({
       status: 200,
       body: { data }
     }));

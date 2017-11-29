@@ -185,7 +185,11 @@ export interface IErrorRelationshipDocument extends IDocumentBase {
  * http://jsonapi.org/format/1.0/#crud-updating
  */
 export interface IUpdateResourceDocument extends IDocumentBase {
-  data: IResourceObjectBase | IBatchOperation[];
+  data: IResourceObjectBase;
+}
+
+export interface IBatchResourceDocument extends IDocumentBase {
+  batch: IBatchOperation[]
 }
 
 /**
