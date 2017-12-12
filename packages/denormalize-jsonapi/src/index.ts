@@ -34,7 +34,7 @@ function transformResource(
   const out = res as IDenormalizedResource;
 
   for (const key of Object.keys(out)) {
-    if (key !== 'id' && key !== 'type') {
+    if (key !== 'id' && key !== 'type' && key !== 'meta') {
       delete out[key];
     }
   }
