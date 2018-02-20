@@ -7,6 +7,7 @@ import dataToLinkage from './internal/data-to-linkage';
 import getRelatedSchema from './internal/get-related-schema';
 import getRelationshipUpdateData from './internal/get-relationship-update-data';
 import modelForType from './internal/model-for-type';
+import verifyRelationships from './internal/verify-relationships';
 
 import CustomError from '../../utils/custom-error';
 
@@ -16,15 +17,16 @@ import { ISuccessResponseObject } from '../../types/utils';
 
 import { IRequestParamsBase } from './types/request-params';
 
-// import processIncluded from './sideposts';
-
 export type IUpdateRest = Pick<IUpdateRequestParamsBase, 'method' | 'options'>;
+
+
 
 export function updateResourceObject(
   model: IModel,
   id: string,
   body: IUpdateResourceDocument,
-  rest: IUpdateRest
+  rest: IUpdateRest,
+  models: IModels
 ) {
   return bluebird.try(() => {
     const schema = model.schema;
@@ -43,10 +45,12 @@ export function updateResourceObject(
     if (Object.keys(body.data).some(invalidResourceObjectKey)) {
       throw new CustomError('Malformed request body.', 400);
     }
-    return model.update(Object.assign({
-      id,
-      data: Object.assign({}, body.data.attributes!, body.data.relationships!)
-    }, rest));
+
+    return verifyRelationships(models, rest.options, body.data.relationships)
+      .then(() => model.update(Object.assign({
+        id,
+        data: Object.assign({}, body.data.attributes!, body.data.relationships!)
+      }, rest)));
   }).then(data => {
     if (data === false) {
       throw new CustomError('Item not found.', 404);
@@ -111,7 +115,7 @@ export default function update(requestParams: IUpdateRequestParams): PromiseLike
     .then(model => (
         isRelatedRequest(requestParams)
         ? updateRelationship(model, id, requestParams.relationship, requestParams.body, rest)
-        : updateResourceObject(model, id, requestParams.body, rest).then(data => ({ data }))
+        : updateResourceObject(model, id, requestParams.body, rest, models).then(data => ({ data }))
       ) as PromiseLike<IResourceObject | IRelationshipObject | null>
-    ).then(top => top ? { status: 200, body: top } : { status: 204 });
+    ).then(top => top ? { status: 200, body: top } : { status: 204 }) as PromiseLike<ISuccessResponseObject>;
 }

@@ -47,12 +47,12 @@ const post: ICreateParams['method'] = 'post';
 const patch: IUpdateParams['method'] = 'patch';
 const del: IDeleteParams['method'] = 'delete';
 
-function sidepostCreate(model: IModel, resource: IBatchOperation, rest: ICreateRest) {
-  return createResourceObject(model, { data: resource } as IUpdateResourceDocument, rest);
+function sidepostCreate(model: IModel, resource: IBatchOperation, rest: ICreateRest, models: IModels) {
+  return createResourceObject(model, { data: resource } as IUpdateResourceDocument, rest, models);
 }
 
-function sidepostUpdate(model: IModel, resource: IBatchOperation, rest: IUpdateRest) {
-  return updateResourceObject(model, resource.id!, { data: resource } as IUpdateResourceDocument, rest);
+function sidepostUpdate(model: IModel, resource: IBatchOperation, rest: IUpdateRest, models: IModels) {
+  return updateResourceObject(model, resource.id!, { data: resource } as IUpdateResourceDocument, rest, models);
 }
 
 function sidepostDelete(model: IModel, resource: IBatchOperation, rest: IDeleteRest) {
@@ -116,7 +116,7 @@ function next(
   
     switch (op) {
     case 'create':
-      return sidepostCreate(model, nextOperation, createRest).then(obj => {
+      return sidepostCreate(model, nextOperation, createRest, models).then(obj => {
         if (batchKey) {
           obj.meta = obj.meta || {};
           (obj.meta as IJSONObject)['batch-key'] = batchKey;
@@ -125,7 +125,7 @@ function next(
         return obj;
       });
     case 'update':
-      return sidepostUpdate(model, nextOperation, updateRest).then(obj => {
+      return sidepostUpdate(model, nextOperation, updateRest, models).then(obj => {
         if (obj && batchKey) {
           obj.meta = obj.meta || {};
           (obj.meta as IJSONObject)['batch-key'] = batchKey;

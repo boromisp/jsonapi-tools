@@ -7,6 +7,7 @@ import dataToLinkage from './internal/data-to-linkage';
 import getRelatedSchema from './internal/get-related-schema';
 import getRelationshipUpdateData from './internal/get-relationship-update-data';
 import modelForType from './internal/model-for-type';
+import verifyRelationships from './internal/verify-relationships';
 
 import CustomError from '../../utils/custom-error';
 
@@ -22,7 +23,8 @@ export type ICreateRest = Pick<ICreateRequestParamsBase, 'method' | 'options'>;
 export function createResourceObject(
   model: IModel,
   body: IUpdateResourceDocument,
-  rest: ICreateRest
+  rest: ICreateRest,
+  models: IModels
 ): PromiseLike<IResourceObject> {
   return bluebird.try(() => {
     const schema = model.schema;
@@ -38,9 +40,12 @@ export function createResourceObject(
     if (Object.keys(body.data).some(invalidResourceObjectKey)) {
       throw new CustomError('Malformed request body.', 400);
     }
-    return model.create(Object.assign({
-      data: Object.assign({}, body.data.attributes!, body.data.relationships!)
-    }, rest)).then(data => dataToResource(model.schema, data));
+
+    return verifyRelationships(models, rest.options, body.data.relationships)
+      .then(() => model.create(Object.assign({
+        data: Object.assign({}, body.data.attributes!, body.data.relationships!)
+      }, rest)))
+      .then(data => dataToResource(model.schema, data));
   });
 }
 
@@ -48,8 +53,9 @@ function createResource(
   model: IModel,
   body: IUpdateResourceDocument,
   rest: ICreateRest,
+  models: IModels
 ): PromiseLike<ISuccessResponseObject> {
-  return createResourceObject(model, body, rest).then(resource => {
+  return createResourceObject(model, body, rest, models).then(resource => {
     const body: ICreateResponseDocument = {
       data: resource
     };
@@ -70,18 +76,6 @@ function createResource(
     return response;
   });
 }
-
-// function createResourceWithIncluded(
-//   models: IModels,
-//   type: string,
-//   body: IUpdateResourceDocument,
-//   rest: ICreateRest
-// ): PromiseLike<ISuccessResponseObject> {
-//   return processIncluded(models, body, rest).then(included => {
-//     const model = modelForType(models, type);
-//     return createResource(model, body, rest, included);
-//   });
-// }
 
 function addToRelationship(
   model: IModel,
@@ -154,6 +148,6 @@ export default function create(requestParams: ICreateRequestParams): PromiseLike
     }));
   } else {
     return bluebird.try(() => modelForType(models, type))
-      .then(model => createResource(model, requestParams.body, rest));
+      .then(model => createResource(model, requestParams.body, rest, models));
   }
 }
