@@ -4,7 +4,7 @@ import CustomError from '../../../utils/custom-error';
 
 import { IRelationshipObject, IResourceIdentifierObject } from 'jsonapi-types';
 
-export default function(type: string, body: IRelationshipObject, canBeEmpty?: boolean): IResourceIdentifierObject[] {
+export default function (type: string, body: IRelationshipObject, canBeEmpty?: boolean): IResourceIdentifierObject[] {
   if (
     Array.isArray(body.data)
     && (body.data.length || canBeEmpty)

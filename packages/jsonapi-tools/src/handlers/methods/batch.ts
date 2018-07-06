@@ -6,7 +6,15 @@ import modelForType from './internal/model-for-type';
 import CustomError from '../../utils/custom-error';
 
 import { IModel, IModels, IUpdateParams, IDeleteParams, ICreateParams } from '../../types/model';
-import { IBatchOperation, IResourceObject, IResourceIdentifierObject, isBatchMeta, IJSONObject, IUpdateResourceDocument, IResourceObjectBase } from 'jsonapi-types';
+import {
+  IBatchOperation,
+  IResourceObject,
+  IResourceIdentifierObject,
+  isBatchMeta,
+  IJSONObject,
+  IUpdateResourceDocument,
+  IResourceObjectBase
+} from 'jsonapi-types';
 
 import { createResourceObject, ICreateRest } from './post';
 import { IDeleteRest } from './delete';
@@ -29,11 +37,15 @@ function relationshipHasUnresolvedBatchID(data: IResourceIdentifierObject | IRes
 }
 
 function resourceHasUnresolvedBatchID(resource: IBatchOperation) {
-  if (isBatchMeta(resource.meta) && resource.meta['batch-key'] && !resource.id && resource.meta.op && resource.meta.op !== 'create') {
+  if (isBatchMeta(resource.meta)
+    && resource.meta['batch-key']
+    && !resource.id
+    && resource.meta.op
+    && resource.meta.op !== 'create') {
     return true;
   }
   const relationships = resource.relationships;
-  if (relationships) {  
+  if (relationships) {
     for (const rel of Object.keys(relationships)) {
       if (relationshipHasUnresolvedBatchID(relationships[rel].data)) {
         return true;
@@ -56,7 +68,7 @@ function sidepostUpdate(model: IModel, resource: IBatchOperation, rest: IUpdateR
 }
 
 function sidepostDelete(model: IModel, resource: IBatchOperation, rest: IDeleteRest) {
-  return model.delete(Object.assign({ id: resource.id! }, rest))
+  return model.delete(Object.assign({ id: resource.id! }, rest));
 }
 
 function cacheBatchKey(data: IResourceObjectBase, cache: Map<string, IResourceObjectBase[]>) {
@@ -113,7 +125,7 @@ function next(
     const op = (nextOperation.meta && nextOperation.meta.op) || 'create';
     const batchKey = (nextOperation.meta && nextOperation.meta['batch-key']);
     const model = modelForType(models, nextOperation.type);
-  
+
     switch (op) {
     case 'create':
       return sidepostCreate(model, nextOperation, createRest, models).then(obj => {
@@ -144,7 +156,7 @@ function next(
     }
   }).then((result: IResourceObject | null) => {
     if (!results) {
-      results = [result]; 
+      results = [result];
     } else {
       results.push(result);
     }
@@ -152,7 +164,7 @@ function next(
     if (remainingOperations.length === 0) {
       return results;
     }
-    
+
     return next(
       models,
       batchKeyReferences,
@@ -169,9 +181,9 @@ export type ISidepostRest = Pick<ICreateRest, 'options'>;
 
 export default function processBatch(
   models: IModels,
-  batch: Array<IBatchOperation>,
+  batch: IBatchOperation[],
   rest: ISidepostRest
-): PromiseLike<(IResourceObject|null)[]> {
+): PromiseLike<Array<IResourceObject|null>> {
   return bluebird.try(() => {
     const batchKeyReferences = new Map();
     for (const operation of batch) {

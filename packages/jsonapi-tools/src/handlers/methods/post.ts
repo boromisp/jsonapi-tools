@@ -12,7 +12,13 @@ import verifyRelationships from './internal/verify-relationships';
 import CustomError from '../../utils/custom-error';
 
 import { IModel, IModels } from '../../types/model';
-import { IRelationshipObject, IUpdateResourceDocument, ICreateResponseDocument, IResourceObject, IBatchResourceDocument } from 'jsonapi-types';
+import {
+  IRelationshipObject,
+  IUpdateResourceDocument,
+  ICreateResponseDocument,
+  IResourceObject,
+  IBatchResourceDocument
+} from 'jsonapi-types';
 import { ISuccessResponseObject } from '../../types/utils';
 import { IRequestParamsBase } from './types/request-params';
 
@@ -51,11 +57,11 @@ export function createResourceObject(
 
 function createResource(
   model: IModel,
-  body: IUpdateResourceDocument,
+  docBody: IUpdateResourceDocument,
   rest: ICreateRest,
   models: IModels
 ): PromiseLike<ISuccessResponseObject> {
-  return createResourceObject(model, body, rest, models).then(resource => {
+  return createResourceObject(model, docBody, rest, models).then(resource => {
     const body: ICreateResponseDocument = {
       data: resource
     };
@@ -64,7 +70,7 @@ function createResource(
       status: 201,
       body
     };
-    
+
     const selfLink = resource.links && resource.links.self;
     if (selfLink) {
       response.headers = {

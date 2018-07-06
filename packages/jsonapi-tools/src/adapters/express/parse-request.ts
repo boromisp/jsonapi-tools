@@ -71,7 +71,7 @@ export interface IJSONAPIRequest extends Request {
   jsonapi: any;
 }
 
-export default function(req: IJSONAPIRequest, customUrlIsLink?: (url: string) => boolean): IRequestParams {
+export default function (req: IJSONAPIRequest, customUrlIsLink?: (url: string) => boolean): IRequestParams {
   const {
     url, method, body,
     params: { type, id, relationship },

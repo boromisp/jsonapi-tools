@@ -91,7 +91,7 @@ function sendResponse(
     responseObject = { status: 500 };
   }
 
-  return function () {
+  return () => {
     res.type('application/vnd.api+json').status(responseObject.status);
     if (responseObject.headers) {
       res.set(responseObject.headers);
@@ -102,7 +102,7 @@ function sendResponse(
       res.end();
     }
     res = undefined!;
-  }
+  };
 }
 
 export interface IMiddlewareOptions {

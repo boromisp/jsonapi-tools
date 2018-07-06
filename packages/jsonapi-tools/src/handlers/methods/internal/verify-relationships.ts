@@ -8,11 +8,11 @@ import modelForType from './model-for-type';
 import CustomError from '../../../utils/custom-error';
 
 function exists(data: IResourceIdentifierObject) {
-  return function (item: IResourceData | null) {
+  return (item: IResourceData | null) => {
     if (!item) {
       throw new CustomError('Related item not found (type: ' + data.type + ', id: ' + data.id + ')', 404);
     }
-  }
+  };
 }
 
 export default function verifyRelationships(
@@ -44,8 +44,8 @@ export default function verifyRelationships(
           }).then(exists(data)));
         }
         return promises;
-      }, [] as Array<PromiseLike<void>>)).then(() => {});
+      }, [] as Array<PromiseLike<void>>)).then(() => void 0);
     }
     return bluebird.resolve();
-  }); 
+  });
 }

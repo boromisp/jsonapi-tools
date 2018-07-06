@@ -37,7 +37,7 @@ function getResource(
 }
 
 interface IResourceObjects extends Array<IResourceObject> {
-  $count?: number
+  $count?: number;
 }
 
 function getResources(
@@ -174,9 +174,10 @@ function includeTier(
             const relationshipData = resource.relationships[relationship].data;
             if (relationshipData) {
               if (Array.isArray(relationshipData)) {
-                return links.concat(relationshipData);
+                return links.concat(relationshipData.filter(data => data.id != null));
+              } else if (relationshipData.id != null) {
+                links.push(relationshipData);
               }
-              links.push(relationshipData);
             }
           }
           return links;
@@ -408,7 +409,9 @@ function getResourcesDocument(requestParams: IGetAllRequestParams): PromiseLike<
             self: `/${type}`
           },
           data: resources,
-          ...(typeof resources.$count === 'undefined' ? null : { meta: { count: resources.$count || resources.length } })
+          ...(typeof resources.$count === 'undefined'
+            ? null
+            : { meta: { count: resources.$count || resources.length } })
         });
       }));
 }

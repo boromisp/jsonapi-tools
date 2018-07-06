@@ -19,8 +19,6 @@ import { IRequestParamsBase } from './types/request-params';
 
 export type IUpdateRest = Pick<IUpdateRequestParamsBase, 'method' | 'options'>;
 
-
-
 export function updateResourceObject(
   model: IModel,
   id: string,
