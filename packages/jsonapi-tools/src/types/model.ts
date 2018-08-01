@@ -12,6 +12,7 @@ export interface ISchemaBase {
 
 export interface IRelationshipSchema extends ISchemaBase {
   links?: (parentType: string, parentId: string, relationship: string) => IRelationshipLinks;
+  readonly?: boolean;
 }
 
 export interface ISchema extends ISchemaBase {
