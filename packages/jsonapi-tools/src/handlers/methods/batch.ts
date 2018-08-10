@@ -115,13 +115,14 @@ function next(
   deleteRest: IDeleteRest,
   results?: Array<IResourceObject | null>): PromiseLike<Array<IResourceObject | null>> {
   return bluebird.try(() => {
-    const nextOperation = remainingOperations.shift();
-    if (!nextOperation) {
+    if (remainingOperations.length === 0) {
       throw new CustomError('Empty batch array.', 400);
     }
-    if (resourceHasUnresolvedBatchID(nextOperation)) {
+    const nextOperationIndex = remainingOperations.findIndex(remOp => !resourceHasUnresolvedBatchID(remOp));
+    if (nextOperationIndex === -1) {
       throw new CustomError('Could not resolve all the side posted operations', 400);
     }
+    const nextOperation = remainingOperations.splice(nextOperationIndex, 1)[0];
     const op = (nextOperation.meta && nextOperation.meta.op) || 'create';
     const batchKey = (nextOperation.meta && nextOperation.meta['batch-key']);
     const model = modelForType(models, nextOperation.type);
