@@ -162,6 +162,8 @@ export default function(
       }
       if (hasIncluded(top)) {
         resources = validData.concat(top.included || []);
+      } else {
+        resources = validData;
       }
 
       const findIncluded = include ? createResourceLookup(resources) : mapRelation;
