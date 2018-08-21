@@ -1,6 +1,6 @@
 {
   "name": "denormalize-jsonapi",
-  "version": "1.3.2",
+  "version": "1.7.0",
   "description": "Denormalize {json:api} (v1.0) documents into a javascript object tree",
   "license": "MIT",
   "homepage": "https://github.com/boromisp/jsonapi-tools/tree/master/packages/denormalize-jsonapi",
