@@ -4,8 +4,9 @@ import { allowedMethods } from './cors-configs';
 import { Request } from 'express';
 
 import { IParsedQueryFields, IParsedIncludes } from '../../types/utils';
-import { IModel } from '../../types/model';
 import CustomError from '../../utils/custom-error';
+import { TypeRequestParams } from '../../handlers/handle-request';
+import { IRequestOptions } from '../../handlers/methods/types/request-params';
 
 function getFields(field?: string): Set<string> {
   if (!field || !field.split) {
@@ -51,27 +52,11 @@ function urlIsLink(url: string): boolean {
   return url.indexOf('/relationships/') !== -1;
 }
 
-export interface IRequestParams {
-  method: 'get' | 'patch' | 'post' | 'delete';
-  options: any;
-  type: string;
-  id?: string;
-  relationship?: string;
-  asLink: boolean;
-  fields: IParsedQueryFields | null;
-  filters: object | null;
-  sorts: string[] | null;
-  page: object | null;
-  includes: IParsedIncludes | null;
-  body: any;
-  models?: { [key: string]: IModel };
-}
-
 export interface IJSONAPIRequest extends Request {
-  jsonapi: any;
+  jsonapi: IRequestOptions;
 }
 
-export default function (req: IJSONAPIRequest, customUrlIsLink?: (url: string) => boolean): IRequestParams {
+export default function (req: IJSONAPIRequest, customUrlIsLink?: (url: string) => boolean): TypeRequestParams {
   const {
     url, method, body,
     params: { type, id, relationship },
@@ -95,6 +80,9 @@ export default function (req: IJSONAPIRequest, customUrlIsLink?: (url: string) =
   if (currentAllowedMethods.indexOf(method.toUpperCase()) === -1) {
     throw new CustomError('Invalid method.', 400);
   }
+  if (method.toUpperCase() === 'OPTIONS') {
+    throw new CustomError('Invalid CORS configuration.', 500);
+  }
 
   return {
     method: method.toLowerCase() as 'get' | 'post' | 'patch' | 'delete',
@@ -109,6 +97,7 @@ export default function (req: IJSONAPIRequest, customUrlIsLink?: (url: string) =
     page: page || null,
     includes: parseIncludeQuery(include),
     body,
-    models: options.models
-  };
+    models: options.models,
+    baseUrl: req.baseUrl,
+  } as TypeRequestParams;
 }

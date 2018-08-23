@@ -1,7 +1,6 @@
 import 'jest';
 
 import get, { IGetOneRequestParams, IGetAllRequestParams } from '../get';
-import { ISuccessResponseObject } from '../../../types/utils';
 import { IModel, IModels, ISchema, IResourceData } from '../../../types/model';
 
 class MockModel implements IModel {
@@ -66,14 +65,16 @@ describe('Test getting a single resource', () => {
   let requestParams: IGetOneRequestParams;
 
   beforeEach(() => {
+    const models = {};
     requestParams = {
       method: 'get',
       type: 'my-type',
       id: '1',
       fields: null,
       includes: null,
-      options: {},
-      models: {}
+      options: { models },
+      models,
+      baseUrl: ''
     };
   });
 
@@ -174,6 +175,7 @@ describe('Test getting all resources', () => {
   let requestParams: IGetAllRequestParams;
 
   beforeEach(() => {
+    const models = {};
     requestParams = {
       method: 'get',
       type: 'my-type',
@@ -182,8 +184,9 @@ describe('Test getting all resources', () => {
       page: null,
       filters: null,
       sorts: null,
-      options: {},
-      models: {}
+      options: { models },
+      models,
+      baseUrl: ''
     };
   });
 

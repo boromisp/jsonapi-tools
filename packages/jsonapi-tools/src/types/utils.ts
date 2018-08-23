@@ -1,4 +1,5 @@
 import { ISuccessDocument, IErrorDocument } from 'jsonapi-types';
+import { FileResult } from 'tmp-promise';
 
 export interface IExtendedError extends Error {
   status: number;
@@ -12,6 +13,7 @@ export interface IExtendedError extends Error {
 
 export interface ISuccessResponseObject {
   body?: ISuccessDocument;
+  file?: FileResult;
   status: number;
   headers?: { [key: string]: string };
 }

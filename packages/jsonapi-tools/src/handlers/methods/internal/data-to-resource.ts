@@ -5,14 +5,22 @@ import dataToLinkage from './data-to-linkage';
 import { ISchema, IResourceData } from '../../../types/model';
 import { IResourceObject } from 'jsonapi-types';
 
-export default function dataToResource(schema: ISchema, data: IResourceData): IResourceObject {
+import prefixedLinks from './prefixed-links';
+
+export default function dataToResource(
+  schema: ISchema, data: IResourceData, baseUrl: string | undefined): IResourceObject {
   const resource: IResourceObject = {
-    links: schema.links ? schema.links(data.id) : {
-      self: `/${schema.type}/${data.id}`
-    },
     type: schema.type,
     id: String(data.id)
   };
+
+  const links = prefixedLinks(baseUrl, schema.links ? schema.links(data.id) : {
+    self: `/${schema.type}/${data.id}`
+  });
+
+  if (links) {
+    resource.links = links;
+  }
 
   let attributes: IResourceObject['attributes'];
   let relationships: IResourceObject['relationships'];
