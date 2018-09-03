@@ -475,12 +475,13 @@ function getResourcesDocument(
         }
 
         if (links) {
-          out.write(`{"links":${JSON.stringify(links)}`);
+          out.write(`{"links":${JSON.stringify(links)},"data":`);
         } else {
-          out.write('{');
+          out.write('{"data":');
         }
 
         out.write(JSON.stringify(resources));
+
         if (meta) {
           out.write(`,"meta":${JSON.stringify(meta)}`);
         }

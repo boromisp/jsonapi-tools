@@ -41,18 +41,18 @@ export interface IMiddlewareOptions {
   models?: any;
 }
 
-export default function createMiddleware({ urlIsLink, models }: IMiddlewareOptions) {
-  const rest = { models };
-
+export default function createMiddleware({ urlIsLink, ...rest }: IMiddlewareOptions) {
   return (req: IJSONAPIRequest, res: Response) => {
     let errorLogger: IErrorLogger = console;
 
-    return bluebird.try(() => parseRequest(req, urlIsLink)).then(request => {
-      if (request.options.log && request.options.log.error) {
-        errorLogger = request.options.log;
-      }
-      return handleRequest(mergeOptions(rest, request));
-    }).then(response => sendResponse(res, response))
-    .catch(error => handleErrors(error, errorLogger));
+    return bluebird.try(() => parseRequest(req, urlIsLink))
+      .then(request => {
+        if (request.options.log && request.options.log.error) {
+          errorLogger = request.options.log;
+        }
+        return handleRequest(mergeOptions(rest, request));
+      })
+      .then(response => sendResponse(res, response))
+      .catch(error => handleErrors(error, errorLogger));
   };
 }
