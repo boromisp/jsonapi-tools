@@ -10,7 +10,7 @@ import dataToResource from './internal/data-to-resource';
 
 import CustomError from '../../utils/custom-error';
 
-import { IModel, IModels } from '../../types/model';
+import { IModel, IModels, IFilters, IPage } from '../../types/model';
 import { ISuccessResponseObject } from '../../types/utils';
 
 import { IRequestParamsBase } from './types/request-params';
@@ -33,11 +33,13 @@ function getResource(
   id: string,
   fields: IParsedQueryFields | null,
   rest: IGetRest,
-  baseUrl: string | undefined
+  baseUrl: string | undefined,
+  joinableIncludes?: IParsedIncludes
 ): PromiseLike<IResourceObject | null> {
   return model.getOne(Object.assign({
     id,
-    fields: fields && fields[model.schema.type]
+    fields: fields && fields[model.schema.type],
+    joinableIncludes
   }, rest)).then(data => data ? dataToResource(model.schema, data, baseUrl) : null);
 }
 
@@ -49,9 +51,9 @@ function getResources(
   model: IModel,
   ids: string[] | null,
   fields: IParsedQueryFields | null,
-  filters: object | null,
+  filters: IFilters | null,
   sorts: string[] | null,
-  page: object | null,
+  page: IPage | null,
   rest: IGetRest,
   baseUrl: string | undefined
 ): PromiseLike<IResourceObjects> {
@@ -305,18 +307,18 @@ export interface IGetOneRequestParams extends IGetRequestParamsBase {
 }
 
 export interface IGetAllRequestParams extends IGetRequestParamsBase {
-  filters: object | null;
+  filters: IFilters | null;
   sorts: string[] | null;
   fields: IParsedQueryFields | null;
   includes: IParsedIncludes | null;
-  page: object | null;
+  page: IPage | null;
 }
 
 export interface IGetRelationshipRequestParams extends IGetRequestParamsBase {
   id: string;
   relationship: string;
   asLink: true;
-  page: object | null;
+  page: IPage | null;
 }
 
 export interface IGetRelatedResourceRequestParams extends IGetAllRequestParams {
@@ -420,16 +422,34 @@ function getRelationshipDocument(
     .then(top => out ? bluebird.fromCallback(callback => out.write(JSON.stringify(top), callback)) : top);
 }
 
+// function getJoinableIncludes(models: IModels, rootModel: IModel, includes: IParsedIncludes): IParsedIncludes {
+//   const joinableIncludes: IParsedIncludes = {};
+
+//   for (const field of Object.keys(includes)) {
+//     const relationship = rootModel.schema.relationships![field];
+//     if (isImmediateJoin(relationship) || isIndirectJoin(relationship)) {
+//     joinableIncludes[field] = getJoinableIncludes(models, modelForType(models, relationship.type), includes[field]);
+//     }
+//   }
+
+//   return joinableIncludes;
+// }
+
 function getResourceDocument(
   requestParams: IGetOneRequestParams, out?: Writable): PromiseLike<void|ISuccessResourceDocument> {
-  const { models, type, fields, options, method, baseUrl } = requestParams;
-  const rest = { options, method};
+  const { models, type, fields, options, method, baseUrl, includes, id } = requestParams;
+  const rest = { options, method };
 
   return bluebird.try(() => modelForType(models, type))
-    .then(model => getResource(model, requestParams.id, fields, rest, baseUrl))
+    .then(model => {
+      if (includes !== null) {
+        return getResource(model, id, fields, rest, baseUrl/*, getJoinableIncludes(models, model, includes)*/);
+      }
+      return getResource(model, id, fields, rest, baseUrl);
+    })
     .then(resource => {
       if (!resource) {
-        throw new CustomError(`Item of type ${type} with id ${requestParams.id} not found.`, 404);
+        throw new CustomError(`Item of type ${type} with id ${id} not found.`, 404);
       }
       const top: ISuccessResourceDocument = { data: resource };
       if (resource.links) {

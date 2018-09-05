@@ -10,7 +10,7 @@ import { IRequestOptions } from '../../handlers/methods/types/request-params';
 
 function getFields(field?: string): Set<string> {
   if (!field || !field.split) {
-    throw Object.assign(new Error('Malformed fields query parameter.'), { status: 400 });
+    throw new CustomError('Malformed fields query parameter.', 400);
   }
   return new Set(field.split(','));
 }
