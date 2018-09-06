@@ -422,19 +422,6 @@ function getRelationshipDocument(
     .then(top => out ? bluebird.fromCallback(callback => out.write(JSON.stringify(top), callback)) : top);
 }
 
-// function getJoinableIncludes(models: IModels, rootModel: IModel, includes: IParsedIncludes): IParsedIncludes {
-//   const joinableIncludes: IParsedIncludes = {};
-
-//   for (const field of Object.keys(includes)) {
-//     const relationship = rootModel.schema.relationships![field];
-//     if (isImmediateJoin(relationship) || isIndirectJoin(relationship)) {
-//     joinableIncludes[field] = getJoinableIncludes(models, modelForType(models, relationship.type), includes[field]);
-//     }
-//   }
-
-//   return joinableIncludes;
-// }
-
 function getResourceDocument(
   requestParams: IGetOneRequestParams, out?: Writable): PromiseLike<void|ISuccessResourceDocument> {
   const { models, type, fields, options, method, baseUrl, includes, id } = requestParams;

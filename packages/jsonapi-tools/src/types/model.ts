@@ -4,14 +4,17 @@ import {
   IResourceIdentifierObject,
   IJSONObject,
 } from 'jsonapi-types';
+import { IParsedIncludes } from './utils';
 
 export interface ISchemaBase {
   type: string;
+  getModel(): IModel;
 }
 
 export interface IRelationshipSchema extends ISchemaBase {
   links?: (parentType: string, parentId: string, relationship: string) => IRelationshipLinks;
   readonly?: boolean;
+  array?: boolean;
 }
 
 export interface ISchema extends ISchemaBase {
@@ -50,6 +53,7 @@ export interface IGetOneParams {
   method: 'get';
   id: string;
   fields: Set<string> | null;
+  includes?: IParsedIncludes | null;
   options: IModelContext;
 }
 
@@ -60,6 +64,7 @@ export interface IGetSomeParams {
   filters: IFilters | null;
   sorts: string[] | null;
   page: IPage | null;
+  includes?: IParsedIncludes | null;
   options: IModelContext;
 }
 
@@ -70,6 +75,7 @@ export interface IGetAllParams {
   filters: IFilters | null;
   sorts: string[] | null;
   page: IPage | null;
+  includes?: IParsedIncludes | null;
   options: IModelContext;
 }
 

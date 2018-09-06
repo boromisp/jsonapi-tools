@@ -68,7 +68,7 @@ function updateRelationship(
   rest: IUpdateRest
 ): PromiseLike<IRelationshipObject | null> {
   return bluebird.try(() => {
-    const { type } = getRelatedSchema(model.schema, relationship);
+    const schema = getRelatedSchema(model.schema, relationship);
     if (!model.updateRelationship) {
       // tslint:disable-next-line:max-line-length
       throw new CustomError(`Cannot update the ${model.schema.type}.${relationship} relationship. Try updating the parent object instead.`, 403);
@@ -79,9 +79,10 @@ function updateRelationship(
     return model.updateRelationship(Object.assign({
       id,
       relationship,
-      data: getRelationshipUpdateData(type, body, true)
-    }, rest));
-  }).then(data => data ? dataToLinkage(model.schema, data, model.schema.type, id, relationship) : null);
+      data: getRelationshipUpdateData(schema.type, body, true)
+    }, rest))
+      .then(data => data ? dataToLinkage(schema, data, schema.type, id, relationship) : null);
+  });
 }
 
 export interface IUpdateRequestParamsBase extends IRequestParamsBase {

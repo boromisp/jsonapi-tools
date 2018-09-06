@@ -1,9 +1,9 @@
 'use strict';
 
 import CustomError from '../../../utils/custom-error';
-import { ISchema, ISchemaBase } from '../../../types/model';
+import { ISchema } from '../../../types/model';
 
-export default function getRelatedSchema(schema: ISchema, relationship: string): ISchemaBase {
+export default function getRelatedSchema(schema: ISchema, relationship: string) {
   const relatedSchema = schema.relationships && schema.relationships[relationship];
   if (relatedSchema) {
     return relatedSchema;

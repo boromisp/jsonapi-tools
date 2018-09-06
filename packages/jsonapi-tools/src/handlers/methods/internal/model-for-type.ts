@@ -2,9 +2,9 @@
 
 import CustomError from '../../../utils/custom-error';
 
-import { IModel } from '../../../types/model';
+import { IModel, IModels } from '../../../types/model';
 
-export default function modelForType(models: { [key: string]: IModel }, type: string): IModel {
+export default function modelForType(models: IModels, type: string): IModel {
   if (models[type] !== undefined) {
     return models[type];
   }

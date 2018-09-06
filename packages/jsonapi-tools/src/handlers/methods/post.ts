@@ -93,7 +93,7 @@ function addToRelationship(
   rest: ICreateRest
 ): PromiseLike<ISuccessResponseObject> {
   return bluebird.try(() => {
-    const { type } = getRelatedSchema(model.schema, relationship);
+    const schema = getRelatedSchema(model.schema, relationship);
     if (!model.addToRelationship) {
       // tslint:disable-next-line:max-line-length
       throw new CustomError(`Cannot add to ${model.schema.type}.${relationship} relationship. Try updating it to the new value instead.`, 403);
@@ -104,12 +104,12 @@ function addToRelationship(
     return model.addToRelationship(Object.assign({
       id,
       relationship,
-      data: getRelationshipUpdateData(type, body)
-    }, rest));
-  }).then(data => data ? {
-    status: 200,
-    body: dataToLinkage(model.schema, data, model.schema.type, id, relationship)
-  } : { status: 204 });
+      data: getRelationshipUpdateData(schema.type, body)
+    }, rest)).then(data => data ? {
+      status: 200,
+      body: dataToLinkage(schema, data, schema.type, id, relationship)
+    } : { status: 204 });
+  });
 }
 
 export interface ICreateRequestParamsBase extends IRequestParamsBase {
