@@ -1,12 +1,12 @@
 import { IJSONObject } from 'jsonapi-types';
 import { CustomError } from 'jsonapi-tools';
 
-import PostgresModel, { IPostgresModelContext } from '../types/postgres-model';
+import PostgresModel, { IPostgresModelContext } from './postgres-model';
 
-export default function baseMapresult(row: IJSONObject, options: IPostgresModelContext, model: PostgresModel) {
+export default function baseMapResult(row: IJSONObject, options: IPostgresModelContext, model: PostgresModel) {
   Object.keys(row).forEach(fieldName => {
     const columnDef = model.columnMap[fieldName];
-    if (columnDef && typeof columnDef === 'object') {
+    if (columnDef) {
       if (columnDef.attrOf) {
         const target = columnDef.attrOf;
         let targetProp = row[target] as IJSONObject;
@@ -15,7 +15,7 @@ export default function baseMapresult(row: IJSONObject, options: IPostgresModelC
         }
 
         const targetDef = model.columnMap[target];
-        if (typeof targetDef === 'object' && targetDef.attrs) {
+        if (targetDef && targetDef.attrs) {
           const attr = targetDef.attrs.find(source => source.in === fieldName);
           if (attr) {
             const out = attr.out;
@@ -37,8 +37,7 @@ export default function baseMapresult(row: IJSONObject, options: IPostgresModelC
     } else {
       for (const field of Object.keys(model.columnMap)) {
         const jsonColumnDef = model.columnMap[field];
-        if (typeof jsonColumnDef === 'object'
-          && jsonColumnDef.attrOf
+        if (jsonColumnDef.attrOf
           && jsonColumnDef.jsonPath
           && fieldName.startsWith(field)
         ) {

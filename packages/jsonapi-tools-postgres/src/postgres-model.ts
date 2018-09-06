@@ -1,46 +1,53 @@
+import { IBaseProtocol } from 'pg-promise';
 import * as bluebird from 'bluebird';
+import { IJSONObject, IRelationshipObject } from 'jsonapi-types';
 import {
-  CustomError,
   IModel,
-  IModelContext,
-  IPage,
-  IResourceData,
-  IUpdateParams,
-  ICreateParams,
-  IDeleteParams,
-  IFilters,
   ISchema,
+  IPage,
+  IModelContext,
+  IResourceData,
+  IFilters,
+  CustomError,
+  IParsedIncludes,
+  IModels,
   IRelationshipSchema
 } from 'jsonapi-tools';
-import { IJSONValue, IJSONObject } from 'jsonapi-types';
 
-import { IBaseProtocol } from 'pg-promise';
+import IColumnMap from './column-map';
+import baseMapInput from './base-map-input';
+import baseMapResult from './base-map-result';
+import { generateSelect, generateUpdate, generateInsert, generateDelete } from './query-builders';
 
-import baseMapInput from '../utils/base-map-input';
-import baseMapResult from '../utils/base-map-result';
-import { generateSelect } from '../utils/postgres-utils';
-
-export type FJoinGenerator = (parentTableAlias: string, childTableAlias: string) => string;
-
-export interface IImmediateJoinRelationship extends IRelationshipSchema {
-  sqlJoin: FJoinGenerator;
+export interface IPostgresModelContext extends IModelContext {
+  tx: IBaseProtocol<any>;
+  url: string;
+  org: string;
+  models: IModels;
 }
 
-export interface IIndirectJoinRelationship extends IRelationshipSchema {
-  junctionTable: string;
-  sqlJoins: [FJoinGenerator, FJoinGenerator];
+export interface IJoinDef {
+  table: string;
+  condition: string;
 }
 
-export type TPostgresRelationshipSchmea = (
-  IRelationshipSchema | IImmediateJoinRelationship | IIndirectJoinRelationship
-);
-
-export function isImmediateJoin(rel: TPostgresRelationshipSchmea): rel is IImmediateJoinRelationship {
-  return 'sqlJoin' in rel;
+export interface IPostgresModelOptions {
+  leftJoins?: IJoinDef[];
+  innerJoins?: IJoinDef[];
+  tags?: { [tag: string]: (opts: IPostgresModelContext) => string };
+  textId?: false;
+  defaultFields?: Set<string>;
+  defaultSorts?: string[];
+  defaultPage?: IPage;
 }
 
-export function isIndirectJoin(rel: TPostgresRelationshipSchmea): rel is IIndirectJoinRelationship {
-  return 'sqlJoins' in rel && 'junctionTable' in rel;
+export type TModelAction = 'getOne' | 'getSome' | 'getAll' | 'create' | 'update' | 'delete';
+
+export interface IModelFilter {
+  leftJoins?: IJoinDef[];
+  innerJoins?: IJoinDef[];
+  conditions?: string[];
+  params?: IJSONObject;
 }
 
 function setFunction(obj: object, name: string | number | symbol, fn: any) {
@@ -54,8 +61,7 @@ function setFunction(obj: object, name: string | number | symbol, fn: any) {
 }
 
 function identity(x: any) { return x; }
-
-function notImplemented() { return bluebird.reject(new CustomError('Not implemented', 403)); }
+function notNull(x: any) { return x !== null; }
 
 function expectSingleRow(rows: IResourceData[]): IResourceData | null {
   if (rows.length > 1) {
@@ -67,56 +73,23 @@ function expectSingleRow(rows: IResourceData[]): IResourceData | null {
   }
 }
 
-export type TModelAction = 'getOne' | 'getSome' | 'getAll' | 'create' | 'update' | 'delete';
-
-export interface IJoinDef {
-  table: string;
-  condition: string;
+export interface IPostgresRelationshipSchema extends IRelationshipSchema {
+  getModel(): PostgresModel;
 }
 
-export interface IColumnDef {
-  get?: string | false;
-  set?: string;
-  column?: string;
-  hidden?: true;
-  default?: string | number;
-  computed?: true;
-  public?: true;
-  jsonPath?: true;
-  get_agg?: string;
-  attrs?: Array<{in: string; out: string}>;
-  attrOf?: string;
-  aggregate?: true;
-  staticUrl?: string | ((value?: IJSONValue, row?: IJSONObject) => string);
+export interface IPostgresSchema extends ISchema {
+  relationships?: { [key: string]: IPostgresRelationshipSchema };
+  getModel(): PostgresModel;
 }
 
-export type TColumnDef = IColumnDef | string;
+export default class PostgresModel implements IModel {
+  public readonly table: string;
+  public readonly columnMap: IColumnMap;
+  public readonly schema: IPostgresSchema;
 
-export interface IColumnMap {
-  [field: string]: TColumnDef;
-}
-
-export interface IModelFilter {
-  leftJoins?: IJoinDef[];
-  innerJoins?: IJoinDef[];
-  conditions?: string[];
-  params?: IJSONObject;
-}
-
-export interface IPostgresModelContext extends IModelContext {
-  tx: IBaseProtocol<any>;
-  url: string;
-  org: string;
-}
-
-export default abstract class PostgresModel implements IModel {
-  public abstract readonly table: string;
-  public abstract readonly columnMap: IColumnMap;
-  public abstract readonly schema: ISchema;
-
-  public abstract readonly defaultFields?: Set<string>;
-  public abstract readonly defaultSorts?: string[];
-  public abstract readonly defaultPage?: IPage;
+  public readonly defaultFields?: Set<string>;
+  public readonly defaultSorts?: string[];
+  public readonly defaultPage?: IPage;
 
   /**
    * "Private" properties to override
@@ -126,16 +99,30 @@ export default abstract class PostgresModel implements IModel {
   protected tags: { [tag: string]: (opts: IPostgresModelContext) => string } = {};
   protected textId = false;
 
-  public getOne({ options, id, fields }: {
+  constructor(schema: IPostgresSchema, table: string, columnMap: IColumnMap, rest?: IPostgresModelOptions) {
+    this.schema = schema;
+    this.table = table;
+    this.columnMap = columnMap;
+
+    if (rest) {
+      for (const key of Object.getOwnPropertyNames(rest) as Array<keyof IPostgresModelOptions>) {
+        Object.defineProperty(this, key, Object.getOwnPropertyDescriptor(rest, key)!);
+      }
+    }
+  }
+
+  public getOne({ options, id, fields, includes }: {
     options: IPostgresModelContext;
     id: string;
     fields: Set<string> | null;
+    includes?: IParsedIncludes | null;
   }) {
     const action = 'getOne';
     return this._checkPermissions({ action, options, id })
       .then(restricted => this.generateSelectFilter({ id, action, options })
         .then(filterOptions => generateSelect({
           fields,
+          includes,
           restricted,
           filterOptions,
           modelOptions: this
@@ -145,13 +132,14 @@ export default abstract class PostgresModel implements IModel {
       .then(this.mapOne(options));
   }
 
-  public getSome({ options, ids, fields, sorts, filters, page }: {
+  public getSome({ options, ids, fields, sorts, filters, page, includes }: {
     options: IPostgresModelContext;
     ids: string[];
     fields: Set<string> | null;
     sorts: string[] | null;
     filters: IFilters | null;
     page: IPage | null;
+    includes?: IParsedIncludes | null;
   }): PromiseLike<IResourceData[]> {
     const action = 'getSome';
     return this._checkPermissions({ action, options, ids })
@@ -161,6 +149,7 @@ export default abstract class PostgresModel implements IModel {
           sorts,
           filters,
           page,
+          includes,
           restricted,
           filterOptions,
           modelOptions: this
@@ -169,12 +158,13 @@ export default abstract class PostgresModel implements IModel {
       .then(this.mapSome(options));
   }
 
-  public getAll({ options, fields, sorts, filters, page }: {
+  public getAll({ options, fields, sorts, filters, page, includes }: {
     options: IPostgresModelContext;
     fields: Set<string> | null;
     sorts: string[] | null;
     filters: IFilters | null;
     page: IPage | null;
+    includes?: IParsedIncludes | null;
   }): PromiseLike<IResourceData[]> {
     const action = 'getAll';
     return this._checkPermissions({ action, options })
@@ -184,6 +174,7 @@ export default abstract class PostgresModel implements IModel {
           sorts,
           filters,
           page,
+          includes,
           restricted,
           filterOptions,
           modelOptions: this
@@ -192,23 +183,70 @@ export default abstract class PostgresModel implements IModel {
       .then(this.mapSome(options));
   }
 
-  public update(_: IUpdateParams): PromiseLike<IResourceData | boolean | null> {
-    return notImplemented();
+  public update({ options, id, data }: {
+    options: IPostgresModelContext;
+    id: string;
+    data: IJSONObject;
+  }): PromiseLike<IResourceData | boolean | null> {
+    const action = 'update';
+    const { table, columnMap, innerJoins, leftJoins} = this;
+    return this._checkPermissions({ action, options })
+      .then(() => this.generateWriteFilter({ id, action, options }))
+      .then(filterOptions => generateUpdate({
+        table,
+        columnMap,
+        innerJoins,
+        leftJoins,
+        filterOptions,
+        data: this.mapUserData(options)(data)
+      }))
+      .then(([query, params]) => options.tx.oneOrNone(query, params))
+      .then(this.mapUpdate(options));
   }
-  public create(_: ICreateParams): PromiseLike<IResourceData> {
-    return notImplemented();
+
+  public create({ options, data }: {
+    options: IPostgresModelContext;
+    data: IJSONObject;
+  }): PromiseLike<IResourceData> {
+    const { table, columnMap } = this;
+    return this._checkPermissions({ action: 'create', options })
+      .then(() => generateInsert({
+        table,
+        columnMap,
+        data: this.mapUserData(options)(data)
+      }))
+      .then(([query, params]) => options.tx.one(query, params))
+      .then(this.mapOne(options));
   }
-  public delete(_: IDeleteParams): PromiseLike<boolean> {
-    return notImplemented();
+
+  public delete({ options, id }: {
+    options: IPostgresModelContext;
+    id: string;
+  }): PromiseLike<boolean> {
+    const action = 'delete';
+    const { table, columnMap, innerJoins, leftJoins} = this;
+    return this._checkPermissions({ action, options })
+      .then(() => this.generateWriteFilter({ id, action, options }))
+      .then(filterOptions => generateDelete({
+        table,
+        columnMap,
+        innerJoins,
+        leftJoins,
+        filterOptions
+      }))
+      .then(([query, params]) => options.tx.oneOrNone(query, params))
+      .then(notNull);
   }
 
   /**
    * "Private" functions to override
    */
-  public get mapResult(): null | ((data: object | IResourceData, options?: object) => IResourceData) {
+  public get mapResult(): null | (
+    (data: IResourceData | IResourceData, options?: IPostgresModelContext) => IResourceData
+  ) {
     if (Object.keys(this.columnMap).some(field => {
       const columnDef = this.columnMap[field];
-      return typeof columnDef === 'object' && !!(columnDef.attrs || columnDef.attrOf || columnDef.staticUrl);
+      return 'attrs' in columnDef || 'attrOf' in columnDef || 'staticUrl' in columnDef;
     })) {
       return setFunction(this, 'mapResult', baseMapResult);
     } else {
@@ -216,16 +254,13 @@ export default abstract class PostgresModel implements IModel {
     }
   }
 
-  public get mapInput(): (data: IResourceData) => IResourceData {
-    if (Object.keys(this.columnMap).some(field => {
-      const columnDef = this.columnMap[field];
-      return typeof columnDef === 'object' && !!columnDef.attrOf;
-    })) {
+  public get mapInput(): (data: IResourceData, options?: IPostgresModelContext) => IResourceData {
+    if (Object.keys(this.columnMap).some(field => 'attrOf' in this.columnMap[field])) {
       return setFunction(this, 'mapInput', baseMapInput);
     } else {
       return setFunction(this, 'mapInput', identity);
     }
-}
+  }
 
   public getFilter(_?: object): IModelFilter | null {
     return null;
@@ -263,20 +298,13 @@ export default abstract class PostgresModel implements IModel {
       configurable: true,
       enumerable: true,
       writable: true,
-      value: Object.keys(this.columnMap).some(field => {
-        const columnDef = this.columnMap[field];
-        return typeof columnDef === 'object' && !!columnDef.public;
-      })
+      value: Object.keys(this.columnMap).some(field => !!this.columnMap[field].public)
     });
     return this.hasPublicField;
   }
 
   protected _selectId(): string {
-    const columnDef = this.columnMap.id;
-    if (typeof columnDef === 'string') {
-      return `${this.table}.${columnDef}${(this.textId ? '::text' : '')}`;
-    }
-    return columnDef.get as string;
+    return this.columnMap.id.get as string;
   }
 
   /**
@@ -313,7 +341,7 @@ export default abstract class PostgresModel implements IModel {
   }
 
   protected generateSelectFilter({ action, id, ids, options }: {
-    action: TModelAction;
+    action: 'getOne' | 'getSome' | 'getAll';
     id?: string | number;
     ids?: Array<string | number>;
     options: IPostgresModelContext;
@@ -336,6 +364,25 @@ export default abstract class PostgresModel implements IModel {
     });
   }
 
+  protected generateWriteFilter({ action, id, options }: {
+    action: 'update' | 'delete';
+    id: string;
+    options: IPostgresModelContext;
+  }) {
+    return bluebird.resolve(this.getFilter(Object.assign({ action }, options))).then(modelFilter => {
+      const { leftJoins = [], innerJoins = [], conditions = [], params = {} } =  (modelFilter || {});
+
+      switch (action) {
+      case 'update':
+      case 'delete':
+        conditions.push(this.conditionSingle);
+        params.id = this._getId({ id, options });
+        break;
+      }
+      return { leftJoins, innerJoins, conditions, params };
+    });
+  }
+
   protected mapOne(options: IPostgresModelContext) {
     return (row: IResourceData | null) => (row && this.mapResult) ? this.mapResult(row, options) : row;
   }
@@ -346,6 +393,38 @@ export default abstract class PostgresModel implements IModel {
       return (rows && mapResult)
         ? rows.map(row => mapResult(row, options))
         : rows;
+    };
+  }
+
+  protected mapUpdate(options: IPostgresModelContext) {
+    return (row: IResourceData | null) => {
+      if (row === null) {
+        return false;
+      } else if (row && Object.keys(row).length === 1) {
+        return true;
+      }
+      return this.mapOne(options)(row);
+    };
+  }
+
+  protected mapUserData(options: IPostgresModelContext) {
+    return (data: IJSONObject) => {
+      const rels = this.schema.relationships;
+      if (data && rels) {
+        for (const relationship of Object.keys(rels)) {
+          const link = data[relationship] as any as IRelationshipObject | null;
+          if (link) {
+            if (Array.isArray(link.data)) {
+              data[relationship] = link.data.map(item => item.id);
+            } else if (link.data) {
+              data[relationship] = parseInt(link.data.id, 10);
+            } else {
+              data[relationship] = null;
+            }
+          }
+        }
+      }
+      return this.mapInput ? this.mapInput(data as IResourceData, options) : data;
     };
   }
 }
