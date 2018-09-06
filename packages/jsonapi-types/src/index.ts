@@ -1,8 +1,6 @@
 import { IJSONObject, IJSONArray, IJSONValue } from './json';
 export { IJSONObject, IJSONArray, IJSONValue };
 
-
-
 /**
  * http://jsonapi.org/format/1.0/#document-links
  */
@@ -45,18 +43,18 @@ export interface IJSONAPIObject {
 }
 
 export interface IBatchCreateMeta {
-  'batch-key': string,
-  op?: 'create'
+  'batch-key': string;
+  op?: 'create';
 }
 
 export interface IBatchUpdateMeta {
-  'batch-key'?: string,
-  op: 'update'
+  'batch-key'?: string;
+  op: 'update';
 }
 
 export interface IBatchDeleteMeta {
-  'batch-key'?: string,
-  op: 'delete'
+  'batch-key'?: string;
+  op: 'delete';
 }
 
 export type TMeta = IJSONObject | IBatchCreateMeta | IBatchUpdateMeta | IBatchDeleteMeta;
@@ -120,7 +118,7 @@ export interface IResourceObject {
 }
 
 export interface IBatchOperation extends IResourceObjectBase {
-  meta: IBatchCreateMeta | IBatchUpdateMeta | IBatchDeleteMeta
+  meta: IBatchCreateMeta | IBatchUpdateMeta | IBatchDeleteMeta;
 }
 
 /**
@@ -189,7 +187,7 @@ export interface IUpdateResourceDocument extends IDocumentBase {
 }
 
 export interface IBatchResourceDocument extends IDocumentBase {
-  batch: IBatchOperation[]
+  batch: IBatchOperation[];
 }
 
 /**
@@ -200,7 +198,7 @@ export interface ICreateResponseDocument extends IDocumentBase {
 }
 
 export interface IBatchResponseDocument extends IDocumentBase {
-  data: Array<IResourceObject | null> 
+  data: Array<IResourceObject | null>;
 }
 
 export type ISuccessDocument =
