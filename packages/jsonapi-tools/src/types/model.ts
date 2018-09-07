@@ -4,7 +4,7 @@ import {
   IResourceIdentifierObject,
   IJSONObject,
 } from 'jsonapi-types';
-import { IParsedIncludes } from './utils';
+import { IParsedIncludes, IParsedQueryFields } from './utils';
 
 export interface ISchemaBase {
   type: string;
@@ -52,7 +52,7 @@ export type IModelContext = any;
 export interface IGetOneParams {
   method: 'get';
   id: string;
-  fields: Set<string> | null;
+  fields: IParsedQueryFields | null;
   includes?: IParsedIncludes | null;
   options: IModelContext;
 }
@@ -60,7 +60,7 @@ export interface IGetOneParams {
 export interface IGetSomeParams {
   method: 'get';
   ids: string[];
-  fields: Set<string> | null;
+  fields: IParsedQueryFields | null;
   filters: IFilters | null;
   sorts: string[] | null;
   page: IPage | null;
@@ -71,7 +71,7 @@ export interface IGetSomeParams {
 export interface IGetAllParams {
   method: 'get';
   ids?: null;
-  fields: Set<string> | null;
+  fields: IParsedQueryFields | null;
   filters: IFilters | null;
   sorts: string[] | null;
   page: IPage | null;

@@ -1,6 +1,6 @@
 const regexpCache = new Map<string, RegExp>();
 
-export default function aliasTableInQuery(sql: string, table: string, alias: string) {
+export default function aliasTableInQuery(sql: string, table: string, alias: string): string {
   if (table === alias) {
     return sql;
   }
@@ -16,7 +16,7 @@ export default function aliasTableInQuery(sql: string, table: string, alias: str
   return sql.replace(exp, alias);
 }
 
-export function aliasTableInQueries(sql: string[], table: string, alias: string) {
+export function aliasTableInQueries(sql: string[], table: string, alias: string): string[] {
   if (table !== alias) {
     for (let i = 0; i < sql.length; ++i) {
       sql[i] = aliasTableInQuery(sql[i], table, alias);

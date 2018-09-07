@@ -46,6 +46,11 @@
         "variable-declaration": "nospace"
       }
     ],
+    "typedef": [
+      true,
+      "call-signature",
+      "property-declaration"
+    ],
     "variable-name": [
       true,
       "ban-keywords"

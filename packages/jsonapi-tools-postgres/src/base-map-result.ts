@@ -1,9 +1,13 @@
 import { IJSONObject } from 'jsonapi-types';
-import { CustomError } from 'jsonapi-tools';
+import { CustomError, IResourceData } from 'jsonapi-tools';
 
 import PostgresModel, { IPostgresModelContext } from './postgres-model';
 
-export default function baseMapResult(row: IJSONObject, options: IPostgresModelContext, model: PostgresModel) {
+export default function baseMapResult(
+  row: IResourceData,
+  options: IPostgresModelContext,
+  model: PostgresModel
+): IResourceData {
   Object.keys(row).forEach(fieldName => {
     const columnDef = model.columnMap[fieldName];
     if (columnDef) {

@@ -2,28 +2,31 @@ import { IResourceData, CustomError } from 'jsonapi-tools';
 import { IJSONObject } from 'jsonapi-types';
 
 import IColumnMap from '../column-map';
+import { as } from 'pg-promise';
 
-function insertReturningColumns({ table, columnMap }: {
-  table: string;
-  columnMap: IColumnMap;
-}): string[] {
+function insertReturningColumns(
+  table: string,
+  columnMap: IColumnMap
+): string[] {
   const tableWithPrefix = new RegExp('(^|[^\\w_])' + table + '\\.');
   const tableName = new RegExp(table + '\\.', 'g');
 
-  const columns = [columnMap.id.get + '::text AS id'];
+  const columns = [`${columnMap.id.get} AS id`];
+
   for (const field of Object.keys(columnMap)) {
-    const columnDef = columnMap[field];
-    if (field !== 'id' && columnDef) {
-      if ('get' in columnDef) {
-        const expr = columnDef.get;
-        if (expr && !columnDef.hidden && expr.match(tableWithPrefix)) {
-          columns.push(`${expr.replace(tableName, '')} AS "${field}"`);
-        }
-      } else if (columnDef.column) {
-        if (!columnDef.hidden) {
-          columns.push(`${columnDef.column} AS "${field}"`);
-        }
+    if (field === 'id') {
+      continue;
+    }
+    const { get, column, hidden } = columnMap[field];
+    if (get === false || hidden || (!get && !column)) {
+      continue;
+    }
+    if (get) {
+      if (get.match(tableWithPrefix)) {
+        columns.push(`${get.replace(tableName, '')} AS ${as.alias(field)}`);
       }
+    } else {
+      columns.push(`${as.name(column)} AS ${as.alias(field)}`);
     }
   }
   return columns;
@@ -49,39 +52,34 @@ export default function generateInsert({ table, columnMap, data }: {
   columnMap: IColumnMap;
   data: IResourceData | IJSONObject;
 }): [string, IJSONObject] {
+
   const params: IJSONObject = {};
   const columns: string[] = [];
   const values: string[] = [];
   const errors: CustomError[] = [];
 
   for (const field of Object.keys(columnMap)) {
-    if (field !== 'id') {
-      const columnDef = columnMap[field];
-      if (columnDef.column && columnDef.set) {
-        const column = columnDef.column;
-        if (!columnDef.computed || (data[field] === undefined && columnDef.default !== undefined)) {
-          if (data[field] === undefined) {
-            if (columnDef.required) {
-              errors.push(Object.assign(new CustomError(`Required field is missing: ${field}.`, 409), {
-                code: 301,
-                title: 'Required field missing',
-                source: { pointer: '/data/*/' + field }
-              }));
-            } else if (columnDef.default !== undefined) {
-              params[column] = columnDef.default;
-            }
-          } else {
-            params[column] = data[field];
-          }
-        }
-        if (data[field] !== undefined || (columnDef.computed && columnDef.default === undefined)) {
-          values.push(columnDef.set);
-          columns.push(column);
-        } else if (params[column] !== undefined) {
-          values.push('$<' + column + '>');
-          columns.push(column);
-        }
+    const { column, set, default: def, required, computed } = columnMap[field];
+    if (!column || !set || field === 'id') {
+      continue;
+    }
+    if (data[field] === undefined) {
+      if (required) {
+        errors.push(Object.assign(new CustomError(`Required field is missing: ${field}.`, 409), {
+          code: 301,
+          title: 'Required field missing',
+          source: { pointer: '/data/*/' + field }
+        }));
+        continue;
+      } else if (def !== undefined) {
+        params[column] = def;
       }
+    } else {
+      params[column] = data[field];
+    }
+    if (column in params || computed) {
+      columns.push(column);
+      values.push(set);
     }
   }
 
@@ -89,10 +87,13 @@ export default function generateInsert({ table, columnMap, data }: {
     throw errors;
   }
 
-  const returning = insertReturningColumns({ table, columnMap });
-
   return [
-    buildInsert({ table, columns, values, returning }),
+    buildInsert({
+      table,
+      columns,
+      values,
+      returning: insertReturningColumns(table, columnMap)
+    }),
     params
   ];
 }

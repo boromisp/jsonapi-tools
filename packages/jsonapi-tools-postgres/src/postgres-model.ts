@@ -11,13 +11,16 @@ import {
   CustomError,
   IParsedIncludes,
   IModels,
-  IRelationshipSchema
+  IRelationshipSchema,
+  IParsedQueryFields
 } from 'jsonapi-tools';
 
 import IColumnMap from './column-map';
 import baseMapInput from './base-map-input';
 import baseMapResult from './base-map-result';
 import { generateSelect, generateUpdate, generateInsert, generateDelete } from './query-builders';
+import NestHydrationJS from 'nesthydrationjs';
+const nestHydrationJS = NestHydrationJS();
 
 export interface IPostgresModelContext extends IModelContext {
   tx: IBaseProtocol<any>;
@@ -50,7 +53,7 @@ export interface IModelFilter {
   params?: IJSONObject;
 }
 
-function setFunction(obj: object, name: string | number | symbol, fn: any) {
+function setFunction(obj: object, name: string | number | symbol, fn: any): any {
   Object.defineProperty(obj, name, {
     configurable: true,
     enumerable: false,
@@ -60,8 +63,8 @@ function setFunction(obj: object, name: string | number | symbol, fn: any) {
   return fn;
 }
 
-function identity(x: any) { return x; }
-function notNull(x: any) { return x !== null; }
+function identity<T>(x: T): T { return x; }
+function notNull(x: any): boolean { return x !== null; }
 
 function expectSingleRow(rows: IResourceData[]): IResourceData | null {
   if (rows.length > 1) {
@@ -87,10 +90,6 @@ export default class PostgresModel implements IModel {
   public readonly columnMap: IColumnMap;
   public readonly schema: IPostgresSchema;
 
-  public readonly defaultFields?: Set<string>;
-  public readonly defaultSorts?: string[];
-  public readonly defaultPage?: IPage;
-
   /**
    * "Private" properties to override
    */
@@ -114,9 +113,9 @@ export default class PostgresModel implements IModel {
   public getOne({ options, id, fields, includes }: {
     options: IPostgresModelContext;
     id: string;
-    fields: Set<string> | null;
+    fields: IParsedQueryFields | null;
     includes?: IParsedIncludes | null;
-  }) {
+  }): PromiseLike<IResourceData | null> {
     const action = 'getOne';
     return this._checkPermissions({ action, options, id })
       .then(restricted => this.generateSelectFilter({ id, action, options })
@@ -127,15 +126,16 @@ export default class PostgresModel implements IModel {
           filterOptions,
           modelOptions: this
         })))
-      .then(([query, params]) => options.tx.manyOrNone(query, params))
+      .then(([query, params]) => (options.tx.manyOrNone(query, params) as PromiseLike<IResourceData[]>))
+      .then(rows => nestHydrationJS.nest(rows))
       .then(expectSingleRow)
-      .then(this.mapOne(options));
+      .then(row => this.mapOne(options, row));
   }
 
   public getSome({ options, ids, fields, sorts, filters, page, includes }: {
     options: IPostgresModelContext;
     ids: string[];
-    fields: Set<string> | null;
+    fields: IParsedQueryFields | null;
     sorts: string[] | null;
     filters: IFilters | null;
     page: IPage | null;
@@ -154,13 +154,14 @@ export default class PostgresModel implements IModel {
           filterOptions,
           modelOptions: this
         })))
-      .then(([query, params]) => options.tx.manyOrNone(query, params))
+      .then(([query, params]) => (options.tx.manyOrNone(query, params) as PromiseLike<IResourceData[]>))
+      .then(rows => nestHydrationJS.nest(rows))
       .then(this.mapSome(options));
   }
 
   public getAll({ options, fields, sorts, filters, page, includes }: {
     options: IPostgresModelContext;
-    fields: Set<string> | null;
+    fields: IParsedQueryFields | null;
     sorts: string[] | null;
     filters: IFilters | null;
     page: IPage | null;
@@ -179,7 +180,8 @@ export default class PostgresModel implements IModel {
           filterOptions,
           modelOptions: this
         })))
-      .then(([query, params]) => options.tx.manyOrNone(query, params))
+      .then(([query, params]) => (options.tx.manyOrNone(query, params) as PromiseLike<IResourceData[]>))
+      .then(rows => nestHydrationJS.nest(rows))
       .then(this.mapSome(options));
   }
 
@@ -200,7 +202,7 @@ export default class PostgresModel implements IModel {
         filterOptions,
         data: this.mapUserData(options)(data)
       }))
-      .then(([query, params]) => options.tx.oneOrNone(query, params))
+      .then(([query, params]) => (options.tx.oneOrNone(query, params) as PromiseLike<IResourceData | null>))
       .then(this.mapUpdate(options));
   }
 
@@ -215,8 +217,8 @@ export default class PostgresModel implements IModel {
         columnMap,
         data: this.mapUserData(options)(data)
       }))
-      .then(([query, params]) => options.tx.one(query, params))
-      .then(this.mapOne(options));
+      .then(([query, params]) => (options.tx.one(query, params) as PromiseLike<IResourceData>))
+      .then(row => this.mapOne(options, row));
   }
 
   public delete({ options, id }: {
@@ -242,7 +244,7 @@ export default class PostgresModel implements IModel {
    * "Private" functions to override
    */
   public get mapResult(): null | (
-    (data: IResourceData | IResourceData, options?: IPostgresModelContext) => IResourceData
+    (data: IResourceData, options?: IPostgresModelContext) => IResourceData
   ) {
     if (Object.keys(this.columnMap).some(field => {
       const columnDef = this.columnMap[field];
@@ -266,7 +268,7 @@ export default class PostgresModel implements IModel {
     return null;
   }
 
-  public actionPermitted(_?: IPostgresModelContext) {
+  public actionPermitted(_?: IPostgresModelContext): boolean {
     return true;
   }
 
@@ -304,13 +306,13 @@ export default class PostgresModel implements IModel {
   }
 
   protected _selectId(): string {
-    return this.columnMap.id.get as string;
+    return this.columnMap.id.get;
   }
 
   /**
    * Private functions
    */
-  protected _getId({ id, options }: { id: string | number, options: IPostgresModelContext }) {
+  protected _getId({ id, options }: { id: string | number, options: IPostgresModelContext }): string | number {
     if (this.tags[id]) {
       id = this.tags[id](options);
     }
@@ -327,7 +329,7 @@ export default class PostgresModel implements IModel {
     options: IPostgresModelContext;
     id?: string | number;
     ids?: string[] | number[];
-  }) {
+  }): PromiseLike<boolean> {
     return bluebird.resolve(this.actionPermitted(Object.assign({ action, id, ids }, options)))
       .then(permitted => {
         if (permitted === null && this.hasPublicField) {
@@ -368,7 +370,7 @@ export default class PostgresModel implements IModel {
     action: 'update' | 'delete';
     id: string;
     options: IPostgresModelContext;
-  }) {
+  }): PromiseLike<IModelFilter> {
     return bluebird.resolve(this.getFilter(Object.assign({ action }, options))).then(modelFilter => {
       const { leftJoins = [], innerJoins = [], conditions = [], params = {} } =  (modelFilter || {});
 
@@ -383,31 +385,39 @@ export default class PostgresModel implements IModel {
     });
   }
 
-  protected mapOne(options: IPostgresModelContext) {
-    return (row: IResourceData | null) => (row && this.mapResult) ? this.mapResult(row, options) : row;
+  protected mapOne(options: IPostgresModelContext, row: IResourceData): IResourceData;
+  protected mapOne(options: IPostgresModelContext, row: null): null;
+  protected mapOne(options: IPostgresModelContext, row: IResourceData | null): IResourceData | null;
+  protected mapOne(options: IPostgresModelContext, row: IResourceData | null): IResourceData | null {
+    if (row === null) {
+      return null;
+    }
+    if (!this.mapResult) {
+      return row;
+    }
+    return this.mapResult(row, options);
   }
 
-  protected mapSome(options: IPostgresModelContext) {
-    return (rows: IResourceData[]) => {
-      const { mapResult } = this;
-      return (rows && mapResult)
-        ? rows.map(row => mapResult(row, options))
-        : rows;
-    };
+  protected mapSome(options: IPostgresModelContext):  (rows: IResourceData[]) => IResourceData[] {
+    const { mapResult } = this;
+    if (mapResult) {
+      return (rows: IResourceData[]) => rows.map(row => mapResult(row, options));
+    }
+    return identity;
   }
 
-  protected mapUpdate(options: IPostgresModelContext) {
+  protected mapUpdate(options: IPostgresModelContext): (row: IResourceData | null) => IResourceData | null | boolean {
     return (row: IResourceData | null) => {
       if (row === null) {
         return false;
       } else if (row && Object.keys(row).length === 1) {
         return true;
       }
-      return this.mapOne(options)(row);
+      return this.mapOne(options, row);
     };
   }
 
-  protected mapUserData(options: IPostgresModelContext) {
+  protected mapUserData(options: IPostgresModelContext): (data: IJSONObject) => IResourceData | IJSONObject {
     return (data: IJSONObject) => {
       const rels = this.schema.relationships;
       if (data && rels) {

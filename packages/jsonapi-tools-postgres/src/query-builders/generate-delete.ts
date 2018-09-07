@@ -9,7 +9,7 @@ function buildDelete({ table, conditions, using = [], returning = [] }: {
   conditions: string[];
   using?: string[];
   returning?: string[];
-}) {
+}): string {
   let query = 'DELETE FROM ' + table;
 
   if (using.length > 0) {

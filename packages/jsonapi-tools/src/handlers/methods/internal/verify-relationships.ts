@@ -30,7 +30,7 @@ export default function verifyRelationships(
             promises.push(modelForType(models, data.type).getOne({
               method: 'get',
               id: data.id,
-              fields: new Set(['id']),
+              fields: { [data.type]: new Set(['id']) },
               options
             }).then(exists(data)));
           }
@@ -39,7 +39,7 @@ export default function verifyRelationships(
           promises.push(modelForType(models, data.type).getOne({
             method: 'get',
             id: data.id,
-            fields: new Set(['id']),
+            fields: { [data.type]: new Set(['id']) },
             options
           }).then(exists(data)));
         }

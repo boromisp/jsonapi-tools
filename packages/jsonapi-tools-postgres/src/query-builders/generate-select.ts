@@ -1,4 +1,4 @@
-import { IFilters, IPage, CustomError, IParsedIncludes } from 'jsonapi-tools';
+import { IFilters, IPage, CustomError, IParsedIncludes, IParsedQueryFields } from 'jsonapi-tools';
 import { IJSONObject } from 'jsonapi-types';
 import { as } from 'pg-promise';
 
@@ -10,18 +10,18 @@ import PostgresModel, { IJoinDef, IModelFilter, IPostgresSchema } from '../postg
 import { isImmediateJoin, isIndirectJoin } from '../types/joins';
 import aliasTableInQuery, { aliasTableInQueries } from './alias-table';
 
-function mapInnerJoin(join: IJoinDef) {
+function mapInnerJoin(join: IJoinDef): string {
   return 'INNER JOIN ' + join.table + ' ON ' + join.condition;
 }
 
-function mapLeftJoin(join: IJoinDef) {
+function mapLeftJoin(join: IJoinDef): string {
   return 'LEFT JOIN ' + join.table + ' ON ' + join.condition;
 }
 
 class TableAliaser {
   private _aliases: Set<string> = new Set();
 
-  public getAlias(table: string) {
+  public getAlias(table: string): string {
     while (this._aliases.has(table)) {
       table += '$';
     }
@@ -38,7 +38,8 @@ function getJoinableIncludes(
   aliaser: TableAliaser,
   parentAlias: string,
   parentPrefix: string,
-  restricted: boolean
+  restricted: boolean,
+  fields: IParsedQueryFields | null
 ): IParsedIncludes {
   const joinableIncludes: IParsedIncludes = {};
 
@@ -73,8 +74,8 @@ function getJoinableIncludes(
 
       columns.push.apply(columns, selectColumns({
         columnMap: childModel.columnMap,
-        table: childModel.table,
-        fields: childModel.defaultFields,
+        table: childAlias,
+        fields: fields && fields[childModel.schema.type],
         restricted,
         prefix
       }));
@@ -87,14 +88,15 @@ function getJoinableIncludes(
         aliaser,
         childAlias,
         prefix,
-        restricted
+        restricted,
+        fields
       );
     }
   }
   return joinableIncludes;
 }
 
-function aliasJoin(join: IJoinDef, aliaser: TableAliaser, columns: string[], conditions: string[]) {
+function aliasJoin(join: IJoinDef, aliaser: TableAliaser, columns: string[], conditions: string[]): void {
   const joinAlias = aliaser.getAlias(join.table);
   join.condition = aliasTableInQuery(join.condition, join.table, joinAlias);
 
@@ -106,9 +108,9 @@ function aliasJoin(join: IJoinDef, aliaser: TableAliaser, columns: string[], con
 
 export default function generateSelect({
   fields, sorts, filters, page, includes, filterOptions, restricted, lock,
-  modelOptions: { schema, table, columnMap, innerJoins, leftJoins, defaultFields, defaultSorts, defaultPage }
+  modelOptions: { schema, table, columnMap, innerJoins, leftJoins }
 }: {
-  fields?: Set<string> | null;
+  fields: IParsedQueryFields | null;
   sorts?: string[] | null;
   filters?: IFilters | null;
   page?: IPage | null;
@@ -125,21 +127,20 @@ export default function generateSelect({
   const conditions: string[] = [];
   const params: IJSONObject = {};
   const order: string[] = [];
-  const columns = selectColumns({ table, columnMap, fields, restricted });
+  const columns = selectColumns({
+    table: alias,
+    columnMap,
+    fields: fields && fields[schema.type],
+    restricted
+  });
 
-  aliasTableInQueries(columns, table, alias);
-
-  if (!fields) {
-    fields = defaultFields;
-  }
-  if (!sorts) {
-    sorts = defaultSorts;
-  }
-  if (!page) {
-    page = defaultPage;
-  }
-
-  ({ innerJoins, leftJoins } = applyFilterOptions({ innerJoins, leftJoins, conditions, params, filterOptions }));
+  ({ innerJoins, leftJoins } = applyFilterOptions({
+    innerJoins,
+    leftJoins,
+    conditions,
+    params,
+    filterOptions
+  }));
 
   aliasTableInQueries(conditions, table, alias);
 
@@ -152,7 +153,15 @@ export default function generateSelect({
   }
 
   const joinableIncludes = includes && getJoinableIncludes(
-    schema, includes, leftJoins, columns, aliaser, table, '_', restricted
+    schema,
+    includes,
+    leftJoins,
+    columns,
+    aliaser,
+    table,
+    '_',
+    restricted,
+    fields
   );
 
   tables.push.apply(tables, innerJoins.map(mapInnerJoin));

@@ -5,6 +5,7 @@ import applyFilterOptions from './apply-filter-options';
 import selectColumns from './select-columns';
 import IColumnMap from '../column-map';
 import { IJoinDef, IModelFilter } from '../postgres-model';
+import { as } from 'pg-promise';
 
 function buildUpdate({ table, updates, conditions, fromlist = [], returning = [] }: {
   table: string;
@@ -68,16 +69,15 @@ LEFT JOIN ${join.table} ON ${join.condition.replace(tablePrefix, '$1' + alias + 
   let hasComputedUpdate = false;
 
   for (const field of Object.keys(data)) {
-    const columnDef = columnMap[field];
-    if (field !== 'id' && columnDef.column && columnDef.set) {
-      updates.push(`${columnDef.column}=${columnDef.set}`);
-      if (columnDef.computed) {
-        hasComputedUpdate = true;
-      } else {
-        params[columnDef.column] = data[field];
-      }
-    } else {
+    const { column, set, computed } = columnMap[field];
+    if (!column || !set || field === 'id') {
       throw new CustomError(`Invalid field: ${field}.`, 400);
+    }
+    updates.push(`${as.name(column)}=${set}`);
+    if (computed) {
+      hasComputedUpdate = true;
+    } else {
+      params[column] = data[field];
     }
   }
 
@@ -85,7 +85,9 @@ LEFT JOIN ${join.table} ON ${join.condition.replace(tablePrefix, '$1' + alias + 
     throw new CustomError('Nothing to update.', 400);
   }
 
-  const returning = hasComputedUpdate ? selectColumns({ table, columnMap }) : [`${table}.${columnMap.id}`];
+  const returning = hasComputedUpdate
+    ? selectColumns({ table, columnMap, prefix: '' })
+    : [`${table}.${columnMap.id.get} AS id`];
 
   return [
     buildUpdate({ table, updates, conditions, fromlist, returning }),

@@ -38,7 +38,7 @@ function getResource(
 ): PromiseLike<IResourceObject | null> {
   return model.getOne(Object.assign({
     id,
-    fields: fields && fields[model.schema.type],
+    fields,
     joinableIncludes
   }, rest)).then(data => data ? dataToResource(model.schema, data, baseUrl) : null);
 }
@@ -59,7 +59,7 @@ function getResources(
 ): PromiseLike<IResourceObjects> {
   if (ids === null) {
     return model.getAll(Object.assign({
-      fields: fields && fields[model.schema.type],
+      fields,
       filters,
       sorts,
       page
@@ -73,7 +73,7 @@ function getResources(
   } else {
     return model.getSome(Object.assign({
       ids,
-      fields: fields && fields[model.schema.type],
+      fields,
       filters,
       sorts,
       page
@@ -102,8 +102,12 @@ function getRelationshipObject(
     const type = model.schema.type;
     const localFields = fields && fields[type] || new Set();
     localFields.add(relationship);
+    if (!fields) {
+      fields = {};
+    }
+    fields[type] = localFields;
 
-    return model.getOne(Object.assign({ id, fields: localFields }, rest)).then(data => {
+    return model.getOne(Object.assign({ id, fields }, rest)).then(data => {
       if (data) {
         return dataToLinkage(relatedSchema, data[relationship], type, id, relationship);
       }

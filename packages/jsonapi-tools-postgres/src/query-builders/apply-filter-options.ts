@@ -13,7 +13,11 @@ export default function applyFilterOptions({
   conditions: string[];
   params: IJSONObject;
   filterOptions?: IModelFilter | null;
-}) {
+}): {
+  innerJoins: IJoinDef[];
+  leftJoins: IJoinDef[];
+} {
+
   if (!filterOptions) {
     return { innerJoins, leftJoins };
   }

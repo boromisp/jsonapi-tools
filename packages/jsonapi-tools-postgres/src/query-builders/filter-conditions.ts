@@ -9,7 +9,7 @@ function processFilterCondition({ filter, column, paramName, conds, params }: {
   paramName: string;
   conds: string[];
   params: IJSONObject;
-}) {
+}): void {
   if (typeof filter === 'string') {
     // ?filters[field]=value
     // Simple equality check
@@ -147,7 +147,7 @@ export default function filterConditions(
   aggConditions?: string[];
   params: IJSONObject;
   prefix?: string;
-}) {
+}): void {
   Object.keys(filters).forEach(field => {
     if (field === 'or') {
       const or: string[] = [];

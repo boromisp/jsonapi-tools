@@ -19,25 +19,6 @@ export interface IColumnDef {
 
 export type TColumnDef = IColumnDef;
 
-// export function get(
-//   columnDef: TColumnDef, table: string, fields: Set<string> | null, restricted: boolean
-// ): sql.SQL | null {
-//   if (typeof columnDef === 'string') {
-//     if (!restricted) {
-//       return sql.join([table, sql.identifier(columnDef)], '.');
-//     }
-//   } else if ('get' in columnDef) {
-//     if (columnDef.get && (fields || !columnDef.hidden) && (!restricted || columnDef.public)) {
-//       return columnDef.get;
-//     }
-//   } else if (columnDef.column) {
-//     if ((fields || !columnDef.hidden) && (!restricted || columnDef.public)) {
-//       return sql.join([table, sql.identifier(columnDef.column)], '.');
-//     }
-//   }
-//   return null;
-// }
-
 // tslint:disable:max-classes-per-file
 
 export class ColumnDef implements IColumnDef {

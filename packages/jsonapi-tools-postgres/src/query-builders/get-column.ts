@@ -2,6 +2,7 @@ import { IJSONObject } from 'jsonapi-types';
 
 import IColumnMap from '../column-map';
 import aliasTableInQuery from './alias-table';
+import { as } from 'pg-promise';
 
 export default function getColumn(
   columnMap: IColumnMap,
@@ -14,30 +15,28 @@ export default function getColumn(
 
   const columnDef = columnMap[fieldName];
   if (columnDef) {
-    if (!aggregate && 'get' in columnDef) {
-      return columnDef.get && aliasTableInQuery(columnDef.get, table, alias);
-    } else if (!aggregate && columnDef.column) {
-      return `${alias}.${columnDef.column}`;
-    } else if (aggregate) {
-      return columnDef.get_agg && aliasTableInQuery(columnDef.get_agg, table, alias);
+    const { get, column, get_agg } = columnDef;
+    if (aggregate) {
+      return get_agg && aliasTableInQuery(get_agg, table, alias);
+    } else if (get) {
+      return aliasTableInQuery(get, table, alias);
+    } else if (column && get !== false) {
+      return `${alias}.${as.name(column)}`;
     }
   }
 
   for (const field of Object.keys(columnMap)) {
     const jsonColumnDef = columnMap[field];
-    if (jsonColumnDef
-      && jsonColumnDef.jsonPath
-      && fieldName.startsWith(field)
-      && (jsonColumnDef.get || jsonColumnDef.column)
-    ) {
+    const { get, column, get_agg, jsonPath } = jsonColumnDef;
+    if (fieldName.startsWith(field) && jsonPath && (get || get_agg) && column) {
       const paramName = fieldName.replace(/[^a-zA-Z0-9_]/g, '_') + '__path';
       params[paramName] = fieldName.substring(field.length + 1).split('.');
-      if (!aggregate && jsonColumnDef.get) {
-        return `${aliasTableInQuery(jsonColumnDef.get, table, alias)}$<${paramName}>`;
+      if (!aggregate && get) {
+        return `${aliasTableInQuery(get, table, alias)}$<${paramName}>`;
       } else if (aggregate) {
-        return jsonColumnDef.get_agg && `${aliasTableInQuery(jsonColumnDef.get_agg, table, alias)}$<${paramName}>`;
+        return get_agg && `${aliasTableInQuery(get_agg, table, alias)}$<${paramName}>`;
       }
-      return `${alias}.${jsonColumnDef.column}#>>$<${paramName}>`;
+      return `${alias}.${as.name(column)}#>>$<${paramName}>`;
     }
   }
   return;
