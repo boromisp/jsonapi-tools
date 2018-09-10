@@ -1,4 +1,4 @@
-import IColumnMap, { Column } from '../column-map';
+import ColumnMap, { Column } from '../column-map';
 import { as } from 'pg-promise';
 
 function addObjectParentField(field: string, columnDef: Column, baseFields: Set<string>): void {
@@ -8,7 +8,7 @@ function addObjectParentField(field: string, columnDef: Column, baseFields: Set<
   baseFields.add(field);
 }
 
-function addObjectSubField(field: string, columnMap: IColumnMap, baseFields: Set<string>): void {
+function addObjectSubField(field: string, columnMap: ColumnMap, baseFields: Set<string>): void {
   const parts = field.split('.');
   if (parts.length === 2) {
     const parent = parts[0];
@@ -26,7 +26,7 @@ function addObjectSubField(field: string, columnMap: IColumnMap, baseFields: Set
   }
 }
 
-function removeObjectSubField(field: string, columnMap: IColumnMap, baseFields: Set<string>): void {
+function removeObjectSubField(field: string, columnMap: ColumnMap, baseFields: Set<string>): void {
   const parts = field.split('.');
   if (parts.length !== 2) {
     return;
@@ -44,7 +44,7 @@ function removeObjectSubField(field: string, columnMap: IColumnMap, baseFields: 
   });
 }
 
-function addField(field: string, columnMap: IColumnMap, baseFields: Set<string>): void {
+function addField(field: string, columnMap: ColumnMap, baseFields: Set<string>): void {
   const columnDef = columnMap[field];
   if (columnDef && columnDef.attrs) {
     return addObjectParentField(field, columnDef, baseFields);
@@ -55,7 +55,7 @@ function addField(field: string, columnMap: IColumnMap, baseFields: Set<string>)
   baseFields.add(field);
 }
 
-function removeField(field: string, columnMap: IColumnMap, baseFields: Set<string>): void {
+function removeField(field: string, columnMap: ColumnMap, baseFields: Set<string>): void {
   const columnDef = columnMap[field];
   if (columnDef && columnDef.attrs) {
     baseFields.delete(field);
@@ -69,7 +69,7 @@ function removeField(field: string, columnMap: IColumnMap, baseFields: Set<strin
   baseFields.delete(field);
 }
 
-function preprocessFields(fields: Set<string>, columnMap: IColumnMap): Set<string> {
+function preprocessFields(fields: Set<string>, columnMap: ColumnMap): Set<string> {
   const baseFields = new Set();
 
   for (const field of fields) {
@@ -99,7 +99,7 @@ function preprocessFields(fields: Set<string>, columnMap: IColumnMap): Set<strin
 }
 
 export default function selectColumns({ columnMap, table, fields = null, restricted = false, prefix = '_' }: {
-  columnMap: IColumnMap;
+  columnMap: ColumnMap;
   table: string;
   fields?: Set<string> | null;
   restricted?: boolean;

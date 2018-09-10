@@ -190,7 +190,9 @@ export default function generateSelect({
 
   // Pagination filters and offsets
   if (page) {
-    const selectId = aliasTableInQuery(columnMap.id.get, table, alias);
+    const selectId = columnMap.id.get
+      ? aliasTableInQuery(columnMap.id.get, table, alias)
+      : `${alias}.${columnMap.id.column}`;
     if (page.before || page.after) {
       if (sorts.length > 0) {
         throw new CustomError('Cursor-based pagination does not work with custom ordering.', 400);

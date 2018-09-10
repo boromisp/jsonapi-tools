@@ -1,7 +1,7 @@
 import { IJSONObject } from 'jsonapi-types';
 
 import applyFilterOptions from './apply-filter-options';
-import IColumnMap from '../column-map';
+import ColumnMap from '../column-map';
 import { IModelFilter, IJoinDef } from '../postgres-model';
 
 function buildDelete({ table, conditions, using = [], returning = [] }: {
@@ -26,7 +26,7 @@ function buildDelete({ table, conditions, using = [], returning = [] }: {
 
 export default function generateDelete({ table, columnMap, filterOptions = null, leftJoins = [], innerJoins = [] }: {
   table: string;
-  columnMap: IColumnMap;
+  columnMap: ColumnMap;
   filterOptions?: IModelFilter | null;
   leftJoins?: IJoinDef[];
   innerJoins?: IJoinDef[];

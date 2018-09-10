@@ -1,11 +1,11 @@
 import { IJSONObject } from 'jsonapi-types';
 
-import IColumnMap from '../column-map';
+import ColumnMap from '../column-map';
 import aliasTableInQuery from './alias-table';
 import { as } from 'pg-promise';
 
 export default function getColumn(
-  columnMap: IColumnMap,
+  columnMap: ColumnMap,
   fieldName: string,
   table: string,
   params: IJSONObject,

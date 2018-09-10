@@ -1,19 +1,19 @@
 import getColumn from './get-column';
 import { CustomError, TFilter, IFilters } from 'jsonapi-tools';
 import { IJSONObject } from 'jsonapi-types';
-import IColumnMap from '../column-map';
+import ColumnMap from '../column-map';
 
-function processFilterCondition({ filter, column, paramName, conds, params }: {
+function processFilterCondition({ filter, column, paramName, conditions, params }: {
   filter: TFilter;
   column: string;
   paramName: string;
-  conds: string[];
+  conditions: string[];
   params: IJSONObject;
 }): void {
   if (typeof filter === 'string') {
     // ?filters[field]=value
     // Simple equality check
-    conds.push(`${column}::text IN($<${paramName}__filter:csv>)`);
+    conditions.push(`${column}::text IN($<${paramName}__filter:csv>)`);
     params[`${paramName}__filter`] = filter.split(',');
   } else {
     // ?filters[field][gt]=value
@@ -21,27 +21,27 @@ function processFilterCondition({ filter, column, paramName, conds, params }: {
     // ...
     // More specific filter expressions
     if (filter.gt) {
-      conds.push(`${column} > $<${paramName}__gt>`);
+      conditions.push(`${column} > $<${paramName}__gt>`);
       params[`${paramName}__gt`] = filter.gt;
     }
     if (filter.gte) {
-      conds.push(`${column} >= $<${paramName}__gte>`);
+      conditions.push(`${column} >= $<${paramName}__gte>`);
       params[`${paramName}__gte`] = filter.gte;
     }
     if (filter.lt) {
-      conds.push(`${column} < $<${paramName}__lt>`);
+      conditions.push(`${column} < $<${paramName}__lt>`);
       params[`${paramName}__lt`] = filter.lt;
     }
     if (filter.lte) {
-      conds.push(`${column} <= $<${paramName}__lte>`);
+      conditions.push(`${column} <= $<${paramName}__lte>`);
       params[`${paramName}__lte`] = filter.lte;
     }
     if (filter.eq) {
-      conds.push(`${column} = $<${paramName}__eq>`);
+      conditions.push(`${column} = $<${paramName}__eq>`);
       params[`${paramName}__eq`] = filter.eq;
     }
     if (filter.ne) {
-      conds.push(`${column} <> $<${paramName}__ne>`);
+      conditions.push(`${column} <> $<${paramName}__ne>`);
       params[`${paramName}__ne`] = filter.ne;
     }
     if (filter.in) {
@@ -49,15 +49,15 @@ function processFilterCondition({ filter, column, paramName, conds, params }: {
       if (inValues.indexOf('null') === -1) {
         if (inValues.length > 0) {
           params[`${paramName}__in`] = inValues;
-          conds.push(`${column}::text IN($<${paramName}__in:csv>)`);
+          conditions.push(`${column}::text IN($<${paramName}__in:csv>)`);
         }
       } else {
         inValues = inValues.filter(value => value !== 'null');
         if (inValues.length > 0) {
           params[`${paramName}__in`] = inValues;
-          conds.push(`(${column}::text IN($<${paramName}__in:csv>) OR ${column} IS NULL)`);
+          conditions.push(`(${column}::text IN($<${paramName}__in:csv>) OR ${column} IS NULL)`);
         } else {
-          conds.push(`${column} IS NULL`);
+          conditions.push(`${column} IS NULL`);
         }
       }
     }
@@ -66,15 +66,15 @@ function processFilterCondition({ filter, column, paramName, conds, params }: {
       if (ninValues.indexOf('null') === -1) {
         if (ninValues.length > 0) {
           params[`${paramName}__nin`] = ninValues;
-          conds.push(`(${column}::text NOT IN($<${paramName}__nin:csv>) OR ${column} IS NULL)`);
+          conditions.push(`(${column}::text NOT IN($<${paramName}__nin:csv>) OR ${column} IS NULL)`);
         }
       } else {
         ninValues = ninValues.filter(value => value !== 'null');
         if (ninValues.length > 0) {
           params[`${paramName}__nin`] = ninValues;
-          conds.push(`(${column}::text NOT IN($<${paramName}__nin:csv>) AND ${column} IS NOT NULL)`);
+          conditions.push(`(${column}::text NOT IN($<${paramName}__nin:csv>) AND ${column} IS NOT NULL)`);
         } else {
-          conds.push(`${column} IS NOT NULL`);
+          conditions.push(`${column} IS NOT NULL`);
         }
       }
     }
@@ -85,13 +85,15 @@ function processFilterCondition({ filter, column, paramName, conds, params }: {
         m2mValues = `%(${m2mValues})%`;
 
         params[`${paramName}__m2m`] = m2mValues;
-        conds.push(`(EXISTS (SELECT 1 FROM unnest(${column}) AS text WHERE text SIMILAR TO $<${paramName}__m2m>))`);
+        conditions.push(
+          `(EXISTS (SELECT 1 FROM unnest(${column}) AS text WHERE text SIMILAR TO $<${paramName}__m2m>))`
+        );
       }
     }
 
     if (filter.pattern) {
       params[`${paramName}__pattern`] = filter.pattern;
-      conds.push(`(${column}::text ILIKE $<${paramName}__pattern>)`);
+      conditions.push(`(${column}::text ILIKE $<${paramName}__pattern>)`);
     }
 
     if (filter.contains) {
@@ -99,39 +101,39 @@ function processFilterCondition({ filter, column, paramName, conds, params }: {
 
       if (containsValues && containsValues.length > 0) {
         params[`${paramName}__contains`] = containsValues;
-        conds.push(`(${column} @> $<${paramName}__contains>)`);
+        conditions.push(`(${column} @> $<${paramName}__contains>)`);
       }
     }
 
     if (filter['contains-ts']) {
       const rangeParamName = `${paramName}__contains_ts`;
       params[rangeParamName] = filter['contains-ts']!;
-      conds.push(`(${column} @> $<${rangeParamName}>::timestamptz)`);
+      conditions.push(`(${column} @> $<${rangeParamName}>::timestamptz)`);
     }
 
     if (filter.is !== undefined) {
       switch (filter.is) {
       case 'true':
-        conds.push(`${column}`);
+        conditions.push(`${column}`);
         break;
       case 'false':
-        conds.push(`NOT ${column}`);
+        conditions.push(`NOT ${column}`);
         break;
       case 'not_true':
-        conds.push(`${column} IS DISTINCT FROM TRUE`);
+        conditions.push(`${column} IS DISTINCT FROM TRUE`);
         break;
       case 'not_false':
-        conds.push(`${column} IS DISTINCT FROM FALSE`);
+        conditions.push(`${column} IS DISTINCT FROM FALSE`);
         break;
       default:
-        conds.push(`${column} IS NULL`);
+        conditions.push(`${column} IS NULL`);
       }
     }
     if (filter.null !== undefined) {
       if (filter.null === 'true') {
-        conds.push(`${column} IS NULL`);
+        conditions.push(`${column} IS NULL`);
       } else {
-        conds.push(`${column} IS NOT NULL`);
+        conditions.push(`${column} IS NOT NULL`);
       }
     }
   }
@@ -140,7 +142,7 @@ function processFilterCondition({ filter, column, paramName, conds, params }: {
 export default function filterConditions(
   { filters, columnMap, table, alias, conditions, aggConditions, params, prefix = '' }: {
   filters: IFilters;
-  columnMap: IColumnMap;
+  columnMap: ColumnMap;
   table: string;
   alias: string;
   conditions: string[];
@@ -181,7 +183,7 @@ export default function filterConditions(
 
     const paramName = prefix + field.replace(/[^a-zA-Z0-9$_]/g, '_');
 
-    processFilterCondition({ filter, column, paramName, conds: conditions, params });
+    processFilterCondition({ filter, column, paramName, conditions, params });
     if (filter && typeof filter === 'object' && filter.having) {
       const aggColumn = getColumn(columnMap, field, table, params, alias, true);
       if (!aggColumn) {
@@ -190,7 +192,13 @@ export default function filterConditions(
       if (!aggConditions) {
         throw new CustomError('Programmer error: missing agg. conditions', 500);
       }
-      processFilterCondition({ filter: filter.having!, column: aggColumn, paramName, conds: aggConditions, params });
+      processFilterCondition({
+        filter: filter.having!,
+        column: aggColumn,
+        paramName,
+        conditions: aggConditions,
+        params
+      });
     }
   });
 }

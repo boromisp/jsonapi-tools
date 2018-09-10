@@ -1,12 +1,12 @@
 import { IResourceData, CustomError } from 'jsonapi-tools';
 import { IJSONObject } from 'jsonapi-types';
 
-import IColumnMap from '../column-map';
+import ColumnMap from '../column-map';
 import { as } from 'pg-promise';
 
 function insertReturningColumns(
   table: string,
-  columnMap: IColumnMap
+  columnMap: ColumnMap
 ): string[] {
   const tableWithPrefix = new RegExp('(^|[^\\w_])' + table + '\\.');
   const tableName = new RegExp(table + '\\.', 'g');
@@ -49,7 +49,7 @@ function buildInsert({ table, columns, values, returning = [] }: {
 
 export default function generateInsert({ table, columnMap, data }: {
   table: string;
-  columnMap: IColumnMap;
+  columnMap: ColumnMap;
   data: IResourceData | IJSONObject;
 }): [string, IJSONObject] {
 
@@ -80,12 +80,13 @@ export default function generateInsert({ table, columnMap, data }: {
     } else {
       params[column] = data[field];
     }
-    if (!set) {
-      throw new CustomError('Programmer error: writable field has no setter', 500);
-    }
     if (column in params || computed) {
       columns.push(column);
-      values.push(set);
+      if (set) {
+        values.push(set);
+      } else {
+        values.push(`$<${column}>`);
+      }
     }
   }
 

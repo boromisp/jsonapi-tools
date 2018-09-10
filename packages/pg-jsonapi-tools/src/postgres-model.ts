@@ -15,7 +15,7 @@ import {
   IParsedQueryFields
 } from 'jsonapi-tools';
 
-import IColumnMap from './column-map';
+import ColumnMap from './column-map';
 import baseMapInput from './base-map-input';
 import baseMapResult from './base-map-result';
 import { generateSelect, generateUpdate, generateInsert, generateDelete } from './query-builders';
@@ -87,7 +87,7 @@ export interface IPostgresSchema extends ISchema {
 
 export default class PostgresModel implements IModel {
   public readonly table: string;
-  public readonly columnMap: IColumnMap;
+  public readonly columnMap: ColumnMap;
   public readonly schema: IPostgresSchema;
 
   /**
@@ -98,7 +98,7 @@ export default class PostgresModel implements IModel {
   protected tags: { [tag: string]: (opts: IPostgresModelContext) => string } = {};
   protected textId = false;
 
-  constructor(schema: IPostgresSchema, table: string, columnMap: IColumnMap, rest?: IPostgresModelOptions) {
+  constructor(schema: IPostgresSchema, table: string, columnMap: ColumnMap, rest?: IPostgresModelOptions) {
     this.schema = schema;
     this.table = table;
     this.columnMap = columnMap;
@@ -306,7 +306,7 @@ export default class PostgresModel implements IModel {
   }
 
   protected _selectId(): string {
-    return this.columnMap.id.get;
+    return this.columnMap.id.get || `${this.table}.${this.columnMap.id.column}`;
   }
 
   /**

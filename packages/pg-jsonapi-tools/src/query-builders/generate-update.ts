@@ -3,7 +3,7 @@ import { IJSONObject } from 'jsonapi-types';
 
 import applyFilterOptions from './apply-filter-options';
 import selectColumns from './select-columns';
-import IColumnMap from '../column-map';
+import ColumnMap from '../column-map';
 import { IJoinDef, IModelFilter } from '../postgres-model';
 import { as } from 'pg-promise';
 
@@ -38,7 +38,7 @@ export default function generateUpdate({
   filterOptions = null
 }: {
   table: string;
-  columnMap: IColumnMap;
+  columnMap: ColumnMap;
   data: IResourceData | IJSONObject;
   leftJoins?: IJoinDef[];
   innerJoins?: IJoinDef[];
@@ -69,11 +69,18 @@ LEFT JOIN ${join.table} ON ${join.condition.replace(tablePrefix, '$1' + alias + 
   let hasComputedUpdate = false;
 
   for (const field of Object.keys(data)) {
-    const { column, set, computed } = columnMap[field];
-    if (!column || !set || field === 'id') {
+    const { column, set, computed, writable } = columnMap[field];
+    if (!writable || field === 'id') {
       throw new CustomError(`Invalid field: ${field}.`, 400);
     }
-    updates.push(`${as.name(column)}=${set}`);
+    if (!column) {
+      throw new CustomError('Programmer error: missing set from writable column', 500);
+    }
+    if (set) {
+      updates.push(`${as.name(column)}=${set}`);
+    } else {
+      updates.push(`${as.name(column)}=$<${column}>`);
+    }
     if (computed) {
       hasComputedUpdate = true;
     } else {
