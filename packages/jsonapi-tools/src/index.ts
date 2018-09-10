@@ -8,4 +8,6 @@ export * from './types/utils';
 
 export { default as CustomError } from './utils/custom-error';
 
+export { validateIncludes } from './handlers/methods/get';
+
 export default localAdatpter;

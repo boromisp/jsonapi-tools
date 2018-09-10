@@ -5,14 +5,19 @@ import { IModel, IModels, ISchema, IResourceData } from '../../../types/model';
 
 class MockModel implements IModel {
   public schema: ISchema;
+  public hasPublicField = false;
+  public mapResult = null;
+
   private _data: IResourceData[];
   private _maxId: number;
 
-  constructor(schema: ISchema, data: IResourceData[] = []) {
-    this.schema = schema;
+  constructor(schema: any, data: IResourceData[] = []) {
+    this.schema = buildSchema(schema);
     this._data = data;
     this._maxId = data.reduce((maxId, row) => Math.max(maxId, Number(row.id)), 0);
   }
+
+  public mapInput = x => x;
 
   public async getOne({ id }) {
     return this._data.find(row => row.id === id) || null;
@@ -55,10 +60,25 @@ class MockModel implements IModel {
 }
 
 function buildModels(...args: IModel[]): IModels {
-  return args.reduce((models, model) => {
-    models[model.schema.type] = model;
-    return models;
+  const models = args.reduce((m, model) => {
+    m[model.schema.type] = model;
+    return m;
   }, {} as IModels);
+
+  args.forEach(model => {
+    const relationships = model.schema.relationships;
+    if (relationships) {
+      Object.keys(relationships).forEach(field => {
+        const relationship = relationships[field];
+        relationship.getModel = () => models[relationship.type];
+      });
+    }
+  });
+  return models;
+}
+
+function buildSchema(schema: any): ISchema {
+  return schema;
 }
 
 describe('Test getting a single resource', () => {

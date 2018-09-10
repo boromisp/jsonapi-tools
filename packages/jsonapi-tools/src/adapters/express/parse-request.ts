@@ -30,7 +30,7 @@ function parseFieldsQuery(fieldsQuery?: IQueryFields): IParsedQueryFields | null
   return parsedFields;
 }
 
-function parseIncludeQuery(includeQuery?: string): IParsedIncludes | null {
+export function parseIncludeQuery(includeQuery?: string): IParsedIncludes | null {
   if (!includeQuery || !includeQuery.split) {
     return null;
   }

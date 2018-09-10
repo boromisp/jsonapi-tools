@@ -10,7 +10,7 @@ import dataToResource from './internal/data-to-resource';
 
 import CustomError from '../../utils/custom-error';
 
-import { IModel, IModels, IFilters, IPage } from '../../types/model';
+import { IModel, IModels, IFilters, IPage, ISchema } from '../../types/model';
 import { ISuccessResponseObject } from '../../types/utils';
 
 import { IRequestParamsBase } from './types/request-params';
@@ -116,13 +116,13 @@ function getRelationshipObject(
   });
 }
 
-function validateIncludes(models: IModels, type: string, includes: IParsedIncludes) {
-  const relationships = models[type].schema.relationships || {};
+export function validateIncludes(schema: ISchema, includes: IParsedIncludes) {
+  const { relationships = {}, type } = schema;
   for (const relationship of Object.keys(includes)) {
     if (!relationships[relationship]) {
       throw new CustomError(`Invalid include. Type ${type} has no relationship named ${relationship}.`, 400);
     }
-    validateIncludes(models, relationships[relationship].type, includes[relationship]);
+    validateIncludes(relationships[relationship].getModel().schema, includes[relationship]);
   }
 }
 
@@ -269,7 +269,7 @@ function getIncludedResources(
   return bluebird.try(() => {
     const primaryType = primary[0].type;
 
-    validateIncludes(models, primaryType, includes);
+    validateIncludes(models[primaryType].schema, includes);
 
     const itemCache: TypeItemCache = new Map();
     for (const resource of primary) {
