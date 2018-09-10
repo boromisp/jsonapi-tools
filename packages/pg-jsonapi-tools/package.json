@@ -1,5 +1,5 @@
 {
-  "name": "jsonapi-tools-postgres",
+  "name": "pg-jsonapi-tools",
   "version": "1.7.2",
   "license": "ISC",
   "description": "",
