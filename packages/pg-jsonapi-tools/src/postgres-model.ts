@@ -19,7 +19,7 @@ import ColumnMap from './column-map';
 import baseMapInput from './base-map-input';
 import baseMapResult from './base-map-result';
 import { generateSelect, generateUpdate, generateInsert, generateDelete } from './query-builders';
-import NestHydrationJS from 'nesthydrationjs';
+import NestHydrationJS = require('nesthydrationjs');
 const nestHydrationJS = NestHydrationJS();
 
 export interface IPostgresModelContext extends IModelContext {
@@ -39,9 +39,9 @@ export interface IPostgresModelOptions {
   innerJoins?: IJoinDef[];
   tags?: { [tag: string]: (opts: IPostgresModelContext) => string };
   textId?: false;
-  defaultFields?: Set<string>;
-  defaultSorts?: string[];
-  defaultPage?: IPage;
+  // defaultFields?: Set<string>;
+  // defaultSorts?: string[];
+  // defaultPage?: IPage;
 }
 
 export type TModelAction = 'getOne' | 'getSome' | 'getAll' | 'create' | 'update' | 'delete';

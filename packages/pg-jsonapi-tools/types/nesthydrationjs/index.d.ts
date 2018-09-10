@@ -14,5 +14,5 @@ declare module 'nesthydrationjs' {
 
     function nesthydrationjs(): INestHydrationJS;
 
-    export default nesthydrationjs;
+    export = nesthydrationjs;
 }

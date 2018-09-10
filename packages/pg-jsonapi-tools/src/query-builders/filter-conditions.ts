@@ -1,7 +1,10 @@
 import getColumn from './get-column';
-import { CustomError, TFilter, IFilters } from 'jsonapi-tools';
+import { CustomError, TFilter, IFilters, validateIncludes } from 'jsonapi-tools';
 import { IJSONObject } from 'jsonapi-types';
 import ColumnMap from '../column-map';
+import { IJoinDef, IPostgresSchema } from '../postgres-model';
+import { parseIncludeQuery } from 'jsonapi-tools/lib/adapters/express/parse-request';
+import { ensureAllRelationshipJoins } from './generate-select';
 
 function processFilterCondition({ filter, column, paramName, conditions, params }: {
   filter: TFilter;
@@ -139,8 +142,19 @@ function processFilterCondition({ filter, column, paramName, conditions, params 
   }
 }
 
-export default function filterConditions(
-  { filters, columnMap, table, alias, conditions, aggConditions, params, prefix = '' }: {
+export default function filterConditions({
+  schema,
+  filters,
+  columnMap,
+  table,
+  alias,
+  conditions,
+  aggConditions,
+  params,
+  prefix = '',
+  leftJoins
+}: {
+  schema: IPostgresSchema;
   filters: IFilters;
   columnMap: ColumnMap;
   table: string;
@@ -149,12 +163,14 @@ export default function filterConditions(
   aggConditions?: string[];
   params: IJSONObject;
   prefix?: string;
+  leftJoins: IJoinDef[];
 }): void {
-  Object.keys(filters).forEach(field => {
+  for (const field of Object.keys(filters)) {
     if (field === 'or') {
       const or: string[] = [];
       const orAggregate: string[] = [];
       filterConditions({
+        schema,
         filters: filters.or!,
         columnMap,
         table,
@@ -162,7 +178,8 @@ export default function filterConditions(
         conditions: or,
         aggConditions: orAggregate,
         params,
-        prefix: 'or__'
+        prefix: 'or__',
+        leftJoins
       });
       conditions.push(`(${or.join(' OR ')})`);
       if (aggConditions) {
@@ -176,7 +193,26 @@ export default function filterConditions(
     }
 
     const filter = filters[field];
-    const column = getColumn(columnMap, field, table, params, alias);
+    let column = getColumn(columnMap, field, table, params, alias);
+    if (!column && field.indexOf('.') !== -1) {
+      const parts = field.split('.');
+      const lastPart = parts.pop()!;
+      const includes = parseIncludeQuery(parts.join('.'))!;
+      validateIncludes(schema, includes);
+      const { childModel, childAlias } = ensureAllRelationshipJoins(
+        schema,
+        parts,
+        leftJoins,
+        alias
+      );
+      column = getColumn(
+        childModel.columnMap,
+        lastPart,
+        childModel.table,
+        params,
+        childAlias
+      );
+    }
     if (!column) {
       throw new CustomError(`Cannot filter by ${field}.`, 400);
     }
@@ -200,5 +236,5 @@ export default function filterConditions(
         params
       });
     }
-  });
+  }
 }

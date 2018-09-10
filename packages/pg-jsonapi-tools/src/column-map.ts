@@ -46,13 +46,13 @@ export class Column {
   public readonly column?: string;
   public readonly get?: string;
   public readonly set?: string;
-  public readonly json: boolean;
+  public readonly json?: true;
   public readonly readable: boolean;
   public readonly writable: boolean;
-  public readonly required: boolean;
-  public readonly hidden: boolean;
-  public readonly public: boolean;
-  public readonly computed: boolean;
+  public readonly required?: true;
+  public readonly hidden?: true;
+  public readonly public?: true;
+  public readonly computed?: true;
   public readonly default?: string;
   public readonly staticUrl?: string;
   public readonly attrs?: ReadonlyArray<{
@@ -70,11 +70,11 @@ export class Column {
       column,
       get,
       set,
-      json = false,
-      required = false,
-      hidden = false,
-      public: pub = false,
-      computed = false,
+      json,
+      required,
+      hidden,
+      public: pub,
+      computed,
       default: def,
       staticUrl,
       attrs,
@@ -88,26 +88,50 @@ export class Column {
       this.readable = false;
     } else {
       this.readable = true;
-      this.get = get;
+      if (get !== undefined) {
+        this.get = get;
+      }
     }
 
     if (set === false) {
       this.writable = false;
     } else {
       this.writable = true;
-      this.set = set;
+      if (set !== undefined) {
+        this.set = set;
+      }
     }
 
-    this.json = json;
-    this.required = required;
-    this.hidden = hidden;
-    this.public = pub;
-    this.computed = computed;
-    this.default = def;
-    this.staticUrl = staticUrl;
-    this.attrs = attrs;
-    this.attrOf = attrOf;
-    this.getAgg = getAgg;
+    if (json !== undefined) {
+      this.json = json;
+    }
+    if (required !== undefined) {
+      this.required = required;
+    }
+    if (hidden !== undefined) {
+      this.hidden = hidden;
+    }
+    if (pub !== undefined) {
+      this.public = pub;
+    }
+    if (computed !== undefined) {
+      this.computed = computed;
+    }
+    if (def !== undefined) {
+      this.default = def;
+    }
+    if (staticUrl !== undefined) {
+      this.staticUrl = staticUrl;
+    }
+    if (attrs !== undefined) {
+      this.attrs = attrs;
+    }
+    if (attrOf !== undefined) {
+      this.attrOf = attrOf;
+    }
+    if (getAgg !== undefined) {
+      this.getAgg = getAgg;
+    }
   }
 }
 

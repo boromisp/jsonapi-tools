@@ -7,27 +7,85 @@ import applyFilterOptions from './apply-filter-options';
 import getColumn from './get-column';
 import filterConditions from './filter-conditions';
 import PostgresModel, { IJoinDef, IModelFilter, IPostgresSchema } from '../postgres-model';
-import { isImmediateJoin, isIndirectJoin } from '../types/joins';
+import { isJoin, IJoinRelationship } from '../types/joins';
 import aliasTableInQuery, { aliasTableInQueries } from './alias-table';
 
 function mapInnerJoin(join: IJoinDef): string {
   return 'INNER JOIN ' + join.table + ' ON ' + join.condition;
 }
 
-function mapLeftJoin(join: IJoinDef): string {
+export function mapLeftJoin(join: IJoinDef): string {
   return 'LEFT JOIN ' + join.table + ' ON ' + join.condition;
 }
 
-class TableAliaser {
-  private _aliases: Set<string> = new Set();
+export function getJunctionAlias(parentType: string, field: string, index: number): string {
+  return as.alias(`${parentType}.${field}_junction_${index}`);
+}
 
-  public getAlias(table: string): string {
-    while (this._aliases.has(table)) {
-      table += '$';
+function ensureRelationshipJoins(
+  parentType: string,
+  field: string,
+  parentAlias: string,
+  relationship: IJoinRelationship,
+  leftJoins: IJoinDef[]
+): {
+  childModel: PostgresModel;
+  childAlias: string;
+} {
+  const childAlias = as.alias(parentType + '.' + field);
+  const childModel = relationship.getModel();
+  const childTable = `${childModel.table} AS ${childAlias}`;
+
+  if (leftJoins.every(join => join.table !== childTable)) {
+    if (relationship.junctions) {
+      for (const [index, junction] of relationship.junctions.entries()) {
+        const junctionAlias = getJunctionAlias(parentType, field, index);
+        leftJoins.push({
+          table: `${junction.table} AS ${junctionAlias}`,
+          condition: junction.sqlJoin(parentAlias, junctionAlias)
+        });
+        parentAlias = junctionAlias;
+      }
     }
-    this._aliases.add(table);
-    return as.alias(table);
+
+    leftJoins.push({
+      table: childTable,
+      condition: relationship.sqlJoin(parentAlias, childAlias)
+    });
   }
+
+  return { childModel, childAlias };
+}
+
+export function ensureAllRelationshipJoins(
+  parentSchema: IPostgresSchema,
+  includes: string[],
+  leftJoins: IJoinDef[],
+  parentAlias: string
+): {
+  childModel: PostgresModel;
+  childAlias: string;
+} {
+  let childModel!: PostgresModel;
+  let childAlias!: string;
+
+  for (const field of includes) {
+    const relationship = parentSchema.relationships![field];
+    if (isJoin(relationship)) {
+      ({ childModel, childAlias } = ensureRelationshipJoins(
+        parentSchema.type,
+        field,
+        parentAlias,
+        relationship,
+        leftJoins
+      ));
+      parentSchema = childModel.schema;
+      parentAlias = childAlias;
+    } else {
+      throw new CustomError(`Cannot include ${parentSchema.type}.${field}`, 400);
+    }
+  }
+  return { childModel, childAlias };
 }
 
 function getJoinableIncludes(
@@ -35,7 +93,6 @@ function getJoinableIncludes(
   includes: IParsedIncludes,
   leftJoins: IJoinDef[],
   columns: string[],
-  aliaser: TableAliaser,
   parentAlias: string,
   parentPrefix: string,
   restricted: boolean,
@@ -46,25 +103,11 @@ function getJoinableIncludes(
   for (const field of Object.keys(includes)) {
     const relationship = parentSchema.relationships![field];
 
-    if (isImmediateJoin(relationship) || isIndirectJoin(relationship)) {
-      const childAlias = aliaser.getAlias(parentSchema.type + '_' + field);
-      const childModel = relationship.getModel();
-
-      if (isImmediateJoin(relationship)) {
-        leftJoins.push({
-          table: `${childModel.table} AS ${childAlias}`,
-          condition: relationship.sqlJoin(parentAlias, childAlias)
-        });
-      } else {
-        const junctionAlias = aliaser.getAlias(`${parentSchema.type}_${field}_junction`);
-        leftJoins.push({
-          table: `${relationship.junctionTable} AS ${junctionAlias}`,
-          condition: relationship.sqlJoins[0](parentAlias, junctionAlias)
-        }, {
-          table: `${childModel.table} AS ${childAlias}`,
-          condition: relationship.sqlJoins[1](junctionAlias, childAlias)
-        });
-      }
+    if (isJoin(relationship)) {
+      const {
+        childModel,
+        childAlias
+      } = ensureRelationshipJoins(parentSchema.type, field, parentAlias, relationship, leftJoins);
 
       let prefix = parentPrefix;
       if (relationship.array) {
@@ -72,20 +115,19 @@ function getJoinableIncludes(
       }
       prefix += field + '_';
 
-      columns.push.apply(columns, selectColumns({
+      columns.push.apply(columns, aliasTableInQueries(selectColumns({
         columnMap: childModel.columnMap,
-        table: childAlias,
+        table: childModel.table,
         fields: fields && fields[childModel.schema.type],
         restricted,
         prefix
-      }));
+      }), childModel.table, childAlias));
 
       joinableIncludes[field] = getJoinableIncludes(
-        relationship.getModel().schema,
+        childModel.schema,
         includes[field],
         leftJoins,
         columns,
-        aliaser,
         childAlias,
         prefix,
         restricted,
@@ -96,8 +138,7 @@ function getJoinableIncludes(
   return joinableIncludes;
 }
 
-function aliasJoin(join: IJoinDef, aliaser: TableAliaser, columns: string[], conditions: string[]): void {
-  const joinAlias = aliaser.getAlias(join.table);
+function aliasJoin(join: IJoinDef, joinAlias: string, columns: string[], conditions: string[]): void {
   join.condition = aliasTableInQuery(join.condition, join.table, joinAlias);
 
   aliasTableInQueries(columns, join.table, joinAlias);
@@ -120,19 +161,18 @@ export default function generateSelect({
   restricted: boolean;
   lock?: { strength?: string; tables?: string[]; option?: string; } | null
 }): [string, IJSONObject] {
-  const aliaser = new TableAliaser();
-  const alias = aliaser.getAlias(table);
+  const alias = as.alias(`${schema.type}__main`);
 
-  const tables = [alias];
+  const tables = [`${table} AS ${alias}`];
   const conditions: string[] = [];
   const params: IJSONObject = {};
   const order: string[] = [];
-  const columns = selectColumns({
-    table: alias,
+  const columns = aliasTableInQueries(selectColumns({
+    table,
     columnMap,
     fields: fields && fields[schema.type],
     restricted
-  });
+  }), table, alias);
 
   ({ innerJoins, leftJoins } = applyFilterOptions({
     innerJoins,
@@ -145,11 +185,11 @@ export default function generateSelect({
   aliasTableInQueries(conditions, table, alias);
 
   for (const join of innerJoins) {
-    aliasJoin(join, aliaser, columns, conditions);
+    aliasJoin(join, as.alias(`${schema.type}__join__${join.table}`), columns, conditions);
   }
 
   for (const join of leftJoins) {
-    aliasJoin(join, aliaser, columns, conditions);
+    aliasJoin(join, as.alias(`${schema.type}__join__${join.table}`), columns, conditions);
   }
 
   // const joinableIncludes = includes && getJoinableIncludes(
@@ -159,8 +199,7 @@ export default function generateSelect({
       includes,
       leftJoins,
       columns,
-      aliaser,
-      table,
+      alias,
       '_',
       restricted,
       fields
@@ -186,7 +225,16 @@ export default function generateSelect({
   });
 
   // Add filter expressions based on the filters object
-  filterConditions({ filters, columnMap, table, alias, conditions, params });
+  filterConditions({
+    schema,
+    filters,
+    columnMap,
+    table,
+    alias,
+    conditions,
+    params,
+    leftJoins
+  });
 
   // Pagination filters and offsets
   if (page) {
@@ -264,7 +312,7 @@ export default function generateSelect({
   ];
 }
 
-function buildSelect({
+export function buildSelect({
   columns,
   tables,
   conditions = [],
@@ -285,7 +333,7 @@ function buildSelect({
   limit?: number | null;
   lock?: string | null;
 }): string {
-  let query = 'SELECT ' + columns.join(',\n  ') + '\nFROM ' + tables.join('\n');
+  let query = 'SELECT\n  ' + columns.join(',\n  ') + '\nFROM ' + tables.join('\n');
 
   if (conditions.length > 0) {
     query += '\nWHERE ' + conditions.join('\n  AND ');
@@ -311,5 +359,5 @@ function buildSelect({
     query += '\nFOR ' + lock;
   }
 
-  return query;
+  return query + ';';
 }

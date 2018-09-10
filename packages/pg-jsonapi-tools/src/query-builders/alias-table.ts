@@ -13,7 +13,7 @@ export default function aliasTableInQuery(sql: string, table: string, alias: str
     }
     regexpCache.set(table, exp);
   }
-  return sql.replace(exp, alias);
+  return sql.replace(exp, alias + '.');
 }
 
 export function aliasTableInQueries(sql: string[], table: string, alias: string): string[] {

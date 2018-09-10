@@ -4,23 +4,16 @@ import {
 
 export type FJoinGenerator = (parentTableAlias: string, childTableAlias: string) => string;
 
-export interface IImmediateJoinRelationship extends IPostgresRelationshipSchema {
+export interface IJoinRelationship extends IPostgresRelationshipSchema {
+  junctions?: ReadonlyArray<{
+    readonly table: string;
+    readonly sqlJoin: FJoinGenerator;
+  }>;
   sqlJoin: FJoinGenerator;
 }
 
-export interface IIndirectJoinRelationship extends IPostgresRelationshipSchema {
-  junctionTable: string;
-  sqlJoins: [FJoinGenerator, FJoinGenerator];
-}
+export type TPostgresRelationshipSchmea = IPostgresRelationshipSchema | IJoinRelationship;
 
-export type TPostgresRelationshipSchmea = (
-  IPostgresRelationshipSchema | IImmediateJoinRelationship | IIndirectJoinRelationship
-);
-
-export function isImmediateJoin(rel: TPostgresRelationshipSchmea): rel is IImmediateJoinRelationship {
+export function isJoin(rel: TPostgresRelationshipSchmea): rel is IJoinRelationship {
   return 'sqlJoin' in rel;
-}
-
-export function isIndirectJoin(rel: TPostgresRelationshipSchmea): rel is IIndirectJoinRelationship {
-  return 'sqlJoins' in rel && 'junctionTable' in rel;
 }

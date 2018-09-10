@@ -109,7 +109,12 @@ export default function selectColumns({ columnMap, table, fields = null, restric
     fields = preprocessFields(fields, columnMap);
   }
 
-  const columns = [`${table}.${as.name(columnMap.id.get)}::text AS ${as.alias(`${prefix}id`)}`];
+  const columns = [] as string[];
+  if (columnMap.id.get) {
+    columns.push(`${as.name(columnMap.id.get)}::text AS ${as.alias(`${prefix}id`)}`);
+  } else {
+    columns.push(`${table}.${as.name(columnMap.id.column)}::text AS ${as.alias(`${prefix}id`)}`);
+  }
   for (const field of Object.keys(columnMap)) {
     const { column, get, hidden, public: pub, readable } = columnMap[field];
     if (field === 'id' || fields && !fields.has(field) || !fields && hidden || !pub && restricted) {
