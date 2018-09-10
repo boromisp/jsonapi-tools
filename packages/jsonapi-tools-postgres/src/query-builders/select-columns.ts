@@ -1,7 +1,7 @@
-import IColumnMap, { IColumnDef } from '../column-map';
+import IColumnMap, { Column } from '../column-map';
 import { as } from 'pg-promise';
 
-function addObjectParentField(field: string, columnDef: IColumnDef, baseFields: Set<string>): void {
+function addObjectParentField(field: string, columnDef: Column, baseFields: Set<string>): void {
   columnDef.attrs!.forEach(subField => {
     baseFields.add(subField.in);
   });
@@ -111,11 +111,11 @@ export default function selectColumns({ columnMap, table, fields = null, restric
 
   const columns = [`${table}.${as.name(columnMap.id.get)}::text AS ${as.alias(`${prefix}id`)}`];
   for (const field of Object.keys(columnMap)) {
-    const { column, get, hidden, public: pub } = columnMap[field];
+    const { column, get, hidden, public: pub, readable } = columnMap[field];
     if (field === 'id' || fields && !fields.has(field) || !fields && hidden || !pub && restricted) {
       continue;
     }
-    if (get !== false) {
+    if (readable) {
       if (get) {
         columns.push(`${get} AS ${as.alias(prefix + field)}`);
       } else if (column) {

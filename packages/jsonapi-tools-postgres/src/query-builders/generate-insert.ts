@@ -17,8 +17,8 @@ function insertReturningColumns(
     if (field === 'id') {
       continue;
     }
-    const { get, column, hidden } = columnMap[field];
-    if (get === false || hidden || (!get && !column)) {
+    const { get, column, hidden, readable } = columnMap[field];
+    if (!readable || hidden) {
       continue;
     }
     if (get) {
@@ -59,9 +59,12 @@ export default function generateInsert({ table, columnMap, data }: {
   const errors: CustomError[] = [];
 
   for (const field of Object.keys(columnMap)) {
-    const { column, set, default: def, required, computed } = columnMap[field];
-    if (!column || !set || field === 'id') {
+    const { column, set, default: def, required, computed, writable } = columnMap[field];
+    if (!writable || field === 'id') {
       continue;
+    }
+    if (!column) {
+      throw new CustomError('Programmer error: writable field has no column', 500);
     }
     if (data[field] === undefined) {
       if (required) {
@@ -76,6 +79,9 @@ export default function generateInsert({ table, columnMap, data }: {
       }
     } else {
       params[column] = data[field];
+    }
+    if (!set) {
+      throw new CustomError('Programmer error: writable field has no setter', 500);
     }
     if (column in params || computed) {
       columns.push(column);

@@ -181,16 +181,7 @@ export default function filterConditions(
 
     const paramName = prefix + field.replace(/[^a-zA-Z0-9$_]/g, '_');
 
-    let conds = conditions;
-    const columnDef = columnMap[field];
-    if (columnDef && columnDef.aggregate) {
-      if (!aggConditions) {
-        throw new CustomError('Programmer error: missing agg. conditions', 500);
-      }
-      conds = aggConditions;
-    }
-
-    processFilterCondition({ filter, column, paramName, conds, params });
+    processFilterCondition({ filter, column, paramName, conds: conditions, params });
     if (filter && typeof filter === 'object' && filter.having) {
       const aggColumn = getColumn(columnMap, field, table, params, alias, true);
       if (!aggColumn) {

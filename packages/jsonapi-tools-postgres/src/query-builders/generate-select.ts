@@ -152,17 +152,20 @@ export default function generateSelect({
     aliasJoin(join, aliaser, columns, conditions);
   }
 
-  const joinableIncludes = includes && getJoinableIncludes(
-    schema,
-    includes,
-    leftJoins,
-    columns,
-    aliaser,
-    table,
-    '_',
-    restricted,
-    fields
-  );
+  // const joinableIncludes = includes && getJoinableIncludes(
+  if (includes) {
+    getJoinableIncludes(
+      schema,
+      includes,
+      leftJoins,
+      columns,
+      aliaser,
+      table,
+      '_',
+      restricted,
+      fields
+    );
+  }
 
   tables.push.apply(tables, innerJoins.map(mapInnerJoin));
 

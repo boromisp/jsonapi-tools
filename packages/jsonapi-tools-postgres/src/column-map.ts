@@ -1,5 +1,3 @@
-import { IJSONValue, IJSONObject } from 'jsonapi-types';
-
 export interface IColumnDef {
   get?: string | false;
   set?: string | false;
@@ -12,8 +10,7 @@ export interface IColumnDef {
   get_agg?: string;
   attrs?: ReadonlyArray<{readonly in: string; readonly out: string}>;
   attrOf?: string;
-  aggregate?: true;
-  staticUrl?: string | ((value?: IJSONValue, row?: IJSONObject) => string);
+  staticUrl?: string;
   required?: true;
 }
 
@@ -80,9 +77,98 @@ export const localizedColumns = structuredColumnDef(supportedLanguages, 'descr')
 export const colorColumns = structuredColumnDef(['r', 'g', 'b'], 'color');
 
 type IColumnMap = {
-  [field: string]: TColumnDef;
+  [field: string]: Column;
 } & {
   id: { get: string; }
 };
 
 export default IColumnMap;
+
+export interface IColumn {
+  column?: string;
+  get?: string | false;
+  set?: string | false;
+  json?: true;
+  required?: true;
+  hidden?: true;
+  public?: true;
+  computed?: true;
+  default?: string;
+  staticUrl?: string;
+  attrs?: ReadonlyArray<{readonly in: string; readonly out: string}>;
+  attrOf?: string;
+  getAgg?: string;
+}
+
+export class Column {
+  public readonly column?: string;
+  public readonly get?: string;
+  public readonly set?: string;
+  public readonly json: boolean;
+  public readonly readable: boolean;
+  public readonly writable: boolean;
+  public readonly required: boolean;
+  public readonly hidden: boolean;
+  public readonly public: boolean;
+  public readonly computed: boolean;
+  public readonly default?: string;
+  public readonly staticUrl?: string;
+  public readonly attrs?: ReadonlyArray<{
+    readonly in: string;
+    readonly out: string
+  }>;
+  public readonly attrOf?: string;
+  public readonly getAgg?: string;
+
+  constructor(config: IColumn | string) {
+    if (typeof config === 'string') {
+      config = { column: config };
+    }
+    const {
+      column,
+      get,
+      set,
+      json = false,
+      required = false,
+      hidden = false,
+      public: pub = false,
+      computed = false,
+      default: def,
+      staticUrl,
+      attrs,
+      attrOf,
+      getAgg
+    } = config;
+
+    this.column = column;
+
+    if (get === false) {
+      this.readable = false;
+    } else {
+      this.readable = true;
+      this.get = get;
+    }
+
+    if (set === false) {
+      this.writable = false;
+    } else {
+      this.writable = true;
+      this.set = set;
+    }
+
+    this.json = json;
+    this.required = required;
+    this.hidden = hidden;
+    this.public = pub;
+    this.computed = computed;
+    this.default = def;
+    this.staticUrl = staticUrl;
+    this.attrs = attrs;
+    this.attrOf = attrOf;
+    this.getAgg = getAgg;
+  }
+}
+
+export function col(config: IColumn | string): Column {
+  return new Column(config);
+}
