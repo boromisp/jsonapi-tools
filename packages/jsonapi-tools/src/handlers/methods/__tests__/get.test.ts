@@ -124,7 +124,7 @@ describe('Test getting a single resource', () => {
       new MockModel({
         type: 'my-type',
         relationships: {
-          rel1: { type: 'other-type' }
+          rel1: { type: 'other-type', array: true }
         }
       }, [{ id: '1' }]),
       new MockModel({ type: 'other-type' })
@@ -154,7 +154,7 @@ describe('Test getting a single resource', () => {
       new MockModel({
         type: 'my-type',
         relationships: {
-          rel1: { type: 'other-type' }
+          rel1: { type: 'other-type', array: true }
         }
       }, [{ id: '1', rel1: ['1', '2', '3'] }]),
       new MockModel({ type: 'other-type' }, [{ id: '1' }, { id: '2' }, { id: '3' }])
@@ -254,7 +254,7 @@ describe('Test getting all resources', () => {
       new MockModel({
         type: 'my-type',
         relationships: {
-          rel1: { type: 'other-type' }
+          rel1: { type: 'other-type', array: true }
         }
       }, [1, 2, 3, 4, 5].map(n => ({
         id: String(n),

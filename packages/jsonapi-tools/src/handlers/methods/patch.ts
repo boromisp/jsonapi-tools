@@ -56,7 +56,7 @@ export function updateResourceObject(
     } else if (data === true) {
       return null;
     }
-    return data ? dataToResource(model.schema, data, baseUrl) : null;
+    return data ? dataToResource(model.schema, data, null, baseUrl) : null;
   });
 }
 

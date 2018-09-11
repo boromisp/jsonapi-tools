@@ -25,6 +25,7 @@ import {
 import { IParsedQueryFields, IParsedIncludes } from '../../types/utils';
 
 import prefixedLinks from './internal/prefixed-links';
+import { TypeItemCache, itemCacheContains, addToItemCache } from './internal/item-cache';
 
 type IGetRest = Pick<IGetRequestParamsBase, 'method' | 'options'>;
 
@@ -33,6 +34,7 @@ function getResource(
   id: string,
   fields: IParsedQueryFields | null,
   rest: IGetRest,
+  itemCache: TypeItemCache,
   baseUrl: string | undefined,
   joinableIncludes?: IParsedIncludes
 ): PromiseLike<IResourceObject | null> {
@@ -40,7 +42,7 @@ function getResource(
     id,
     fields,
     joinableIncludes
-  }, rest)).then(data => data ? dataToResource(model.schema, data, baseUrl) : null);
+  }, rest)).then(data => data ? dataToResource(model.schema, data, itemCache, baseUrl) : null);
 }
 
 interface IResourceObjects extends Array<IResourceObject> {
@@ -55,6 +57,7 @@ function getResources(
   sorts: string[] | null,
   page: IPage | null,
   rest: IGetRest,
+  itemCache: TypeItemCache,
   baseUrl: string | undefined
 ): PromiseLike<IResourceObjects> {
   if (ids === null) {
@@ -64,7 +67,7 @@ function getResources(
       sorts,
       page
     }, rest)).then(data => {
-      const resources: IResourceObjects = data.map(item => dataToResource(model.schema, item, baseUrl));
+      const resources: IResourceObjects = data.map(item => dataToResource(model.schema, item, itemCache, baseUrl));
       if (data.length && data[0].__count) {
         resources.$count = data[0].__count;
       }
@@ -79,7 +82,7 @@ function getResources(
       page
     }, rest)).then(data => {
       if (data) {
-        const resources: IResourceObjects = data.map(item => dataToResource(model.schema, item, baseUrl));
+        const resources: IResourceObjects = data.map(item => dataToResource(model.schema, item, itemCache, baseUrl));
         if (data.length && data[0].__count) {
           resources.$count = data[0].__count;
         }
@@ -150,22 +153,6 @@ function uniqueLinks(links: Array<IResourceObject | IResourceIdentifierObject>):
   return out;
 }
 
-type TypeItemCache = Map<string, Map<string, IResourceObject>>;
-
-function addToItemCache(itemCache: TypeItemCache, resource: IResourceObject) {
-  let itemCacheWithType = itemCache.get(resource.type);
-  if (!itemCacheWithType) {
-    itemCacheWithType = new Map();
-    itemCache.set(resource.type, itemCacheWithType);
-  }
-  itemCacheWithType.set(resource.id, resource);
-}
-
-function itemCacheContains(itemCache: TypeItemCache, type: string, id: string) {
-  const itemCacheWithType = itemCache.get(type);
-  return itemCacheWithType && itemCacheWithType.has(id);
-}
-
 function includeTier(
   models: IModels,
   fields: IParsedQueryFields | null,
@@ -219,7 +206,9 @@ function includeTier(
       return links;
     }, []);
 
-    const promises = newLinks.map(([model, ids]) => getResources(model, ids, fields, null, null, null, rest, baseUrl));
+    const promises = newLinks.map(
+      ([model, ids]) => getResources(model, ids, fields, null, null, null, rest, itemCache, baseUrl)
+    );
     return bluebird.all(promises);
   }).then(resourceArrays => {
     for (const resources of resourceArrays) {
@@ -263,6 +252,7 @@ function getIncludedResources(
   fields: IParsedQueryFields | null,
   includes: IParsedIncludes,
   rest: IGetRest,
+  itemCache: TypeItemCache,
   baseUrl: string | undefined,
   out?: Writable
 ): PromiseLike<IResourceObject[]> {
@@ -271,7 +261,6 @@ function getIncludedResources(
 
     validateIncludes(models[primaryType].schema, includes);
 
-    const itemCache: TypeItemCache = new Map();
     for (const resource of primary) {
       addToItemCache(itemCache, resource);
     }
@@ -350,6 +339,7 @@ export function isRelatedRequest(
 function includeRelatedResources(
   requestParams: IGetOneRequestParams | IGetAllRequestParams | IGetRelatedResourceRequestParams,
   top: ISuccessResourceDocument,
+  itemCache: TypeItemCache,
   out?: Writable
 ): PromiseLike<ISuccessResourceDocument> {
   const { models, fields, includes, options, method, baseUrl } = requestParams;
@@ -357,7 +347,7 @@ function includeRelatedResources(
 
   if (includes && top.data && (!Array.isArray(top.data) || top.data.length)) {
     const primary = Array.isArray(top.data) ? top.data : [top.data];
-    return getIncludedResources(models, primary, fields, includes, rest, baseUrl, out).then(included => {
+    return getIncludedResources(models, primary, fields, includes, rest, itemCache, baseUrl, out).then(included => {
       if (out) {
         return top;
       }
@@ -371,7 +361,9 @@ function includeRelatedResources(
 }
 
 function getRelatedResourceDocument(
-  requestParams: IGetRelatedResourceRequestParams, out?: Writable
+  requestParams: IGetRelatedResourceRequestParams,
+  itemCache: TypeItemCache,
+  out?: Writable
 ): PromiseLike<void|ISuccessResourceDocument> {
   const { models, type, fields, options, page, method, filters, sorts, id, relationship, baseUrl } = requestParams;
   const rest = { options, method};
@@ -391,6 +383,7 @@ function getRelatedResourceDocument(
             relationshipObject.data.map(item => item.id),
             fields, filters, sorts, page,
             rest,
+            itemCache,
             baseUrl
           ).then(data => {
             top.data = data;
@@ -407,16 +400,18 @@ function getRelatedResourceDocument(
           relationshipObject.data.id,
           fields,
           rest,
+          itemCache,
           baseUrl
         ).then(data => { top.data = data; return top; });
       }
       return top;
-    }).then(top => includeRelatedResources(requestParams, top))
+    }).then(top => includeRelatedResources(requestParams, top, itemCache))
     .then(top => out ? bluebird.fromCallback(callback => out.write(JSON.stringify(top), callback)) : top);
 }
 
 function getRelationshipDocument(
-  requestParams: IGetRelationshipRequestParams, out?: Writable
+  requestParams: IGetRelationshipRequestParams,
+  out?: Writable
 ): PromiseLike<void|ISuccessResourceDocument> {
   const { models, type, options, page, method, id, relationship } = requestParams;
   const rest = { options, page, method};
@@ -427,16 +422,19 @@ function getRelationshipDocument(
 }
 
 function getResourceDocument(
-  requestParams: IGetOneRequestParams, out?: Writable): PromiseLike<void|ISuccessResourceDocument> {
+  requestParams: IGetOneRequestParams,
+  itemCache: TypeItemCache,
+  out?: Writable
+): PromiseLike<void|ISuccessResourceDocument> {
   const { models, type, fields, options, method, baseUrl, includes, id } = requestParams;
   const rest = { options, method };
 
   return bluebird.try(() => modelForType(models, type))
     .then(model => {
       if (includes !== null) {
-        return getResource(model, id, fields, rest, baseUrl/*, getJoinableIncludes(models, model, includes)*/);
+        return getResource(model, id, fields, rest, itemCache, baseUrl);
       }
-      return getResource(model, id, fields, rest, baseUrl);
+      return getResource(model, id, fields, rest, itemCache, baseUrl);
     })
     .then(resource => {
       if (!resource) {
@@ -446,19 +444,31 @@ function getResourceDocument(
       if (resource.links) {
         top.links = { self: resource.links.self };
       }
-      return includeRelatedResources(requestParams, top);
+      return includeRelatedResources(requestParams, top, itemCache);
     })
     .then(top => out ? bluebird.fromCallback(callback => out.write(JSON.stringify(top), callback)) : top);
 }
 
 function getResourcesDocument(
-  requestParams: IGetAllRequestParams, out?: Writable): PromiseLike<void|ISuccessResourceDocument> {
+  requestParams: IGetAllRequestParams,
+  itemCache: TypeItemCache,
+  out?: Writable
+): PromiseLike<void|ISuccessResourceDocument> {
   const { models, type, fields, options, page, method, baseUrl } = requestParams;
   const rest = { options, page, method};
 
   return bluebird.try(() => modelForType(models, type))
     .then((model: IModel) => getResources(
-      model, null, fields, requestParams.filters, requestParams.sorts, page, rest, baseUrl)
+        model,
+        null,
+        fields,
+        requestParams.filters,
+        requestParams.sorts,
+        page,
+        rest,
+        itemCache,
+        baseUrl
+      )
       .then(resources => {
         const count = resources.$count;
         delete resources.$count;
@@ -482,7 +492,7 @@ function getResourcesDocument(
           if (meta) {
             top.meta = meta;
           }
-          return includeRelatedResources(requestParams, top);
+          return includeRelatedResources(requestParams, top, itemCache);
         }
 
         if (links) {
@@ -497,7 +507,7 @@ function getResourcesDocument(
           out.write(`,"meta":${JSON.stringify(meta)}`);
         }
 
-        return includeRelatedResources(requestParams, { data: resources }, out).then(top => {
+        return includeRelatedResources(requestParams, { data: resources }, itemCache, out).then(top => {
           if (top.included && top.included.length) {
             out.write(',"included":');
             out.write(JSON.stringify(top.included));
@@ -510,14 +520,15 @@ function getResourcesDocument(
 function getResponseDocument(
   requestParams: IGetRequestParams, out?: Writable
 ): PromiseLike<void|ISuccessResourceDocument> {
+  const itemCache: TypeItemCache = new Map();
   if (isRelatedRequest(requestParams)) {
     return requestParams.asLink
       ? getRelationshipDocument(requestParams, out)
-      : getRelatedResourceDocument(requestParams, out);
+      : getRelatedResourceDocument(requestParams, itemCache, out);
   }
   return isGetOneRequest(requestParams)
-    ? getResourceDocument(requestParams, out)
-    : getResourcesDocument(requestParams, out);
+    ? getResourceDocument(requestParams, itemCache, out)
+    : getResourcesDocument(requestParams, itemCache, out);
 }
 
 export default function get(

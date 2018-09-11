@@ -52,7 +52,7 @@ export function createResourceObject(
       .then(() => model.create(Object.assign({
         data: Object.assign({}, body.data.attributes!, body.data.relationships!)
       }, rest)))
-      .then(data => dataToResource(model.schema, data, baseUrl));
+      .then(data => dataToResource(model.schema, data, null, baseUrl));
   });
 }
 

@@ -30,7 +30,7 @@ const schemaWithCustomLinks = {
 describe('Test building an IResourceObject', () => {
 
   test('Convert `empty` IResrouceData to IResourceObject', () => {
-    expect(dataToResource(schema, { id: '1' }, '')).toMatchSnapshot();
+    expect(dataToResource(schema, { id: '1' }, null, '')).toMatchSnapshot();
   });
 
   test('Add attributes', () => {
@@ -39,7 +39,7 @@ describe('Test building an IResourceObject', () => {
       some: 'attribute',
       'a-date': new Date(1234567890123),
       'an-array-of-stuff': [1, '2', { n: '3' }]
-    }, '')).toMatchSnapshot();
+    }, null, '')).toMatchSnapshot();
   });
 
   test('Add relationships', () => {
@@ -47,10 +47,10 @@ describe('Test building an IResourceObject', () => {
       id: '1',
       rel: '5',
       'other-rel': null
-    }, '')).toMatchSnapshot();
+    }, null, '')).toMatchSnapshot();
   });
 
   test('Use custom `links` generation', () => {
-    expect(dataToResource(schemaWithCustomLinks, { id: '1' }, '')).toMatchSnapshot();
+    expect(dataToResource(schemaWithCustomLinks, { id: '1' }, null, '')).toMatchSnapshot();
   });
 });
