@@ -85,6 +85,24 @@ export interface IPostgresSchema extends ISchema {
   getModel(): PostgresModel;
 }
 
+export function setupModelGetters(models: { [type: string]: PostgresModel }): void {
+  for (const type of Object.keys(models)) {
+    const model = models[type];
+    if (!model.schema.getModel) {
+      model.schema.getModel = () => models[type];
+    }
+
+    if (model.schema.relationships) {
+      for (const field of Object.keys(model.schema.relationships)) {
+        const relationship = model.schema.relationships[field];
+        if (!relationship.getModel) {
+          relationship.getModel = () => models[relationship.type];
+        }
+      }
+    }
+  }
+}
+
 export default class PostgresModel implements IModel {
   public readonly table: string;
   public readonly columnMap: ColumnMap;

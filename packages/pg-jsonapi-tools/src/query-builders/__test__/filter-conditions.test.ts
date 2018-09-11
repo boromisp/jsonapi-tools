@@ -1,18 +1,12 @@
 import "jest";
 
-import filterConditions from "../filter-conditions";
-import PostgresModel, { IJoinDef } from "../../postgres-model";
+import PostgresModel from "../../postgres-model";
 import ColumnMap from "../../column-map";
-import generateSelect, { buildSelect, mapLeftJoin } from "../generate-select";
-import { as } from "pg-promise";
-import { IJSONObject } from "jsonapi-types";
-import { aliasTableInQueries } from "../alias-table";
-import selectColumns from "../select-columns";
+import generateSelect, {  } from "../generate-select";
 import { IJoinRelationship } from "../../types/joins";
 
 describe("Test", () => {
   test("Test 1", () => {
-    const conditions: string[] = [];
 
     const model = new PostgresModel(
       {
@@ -68,8 +62,6 @@ describe("Test", () => {
       restricted: false,
       modelOptions: model
     });
-
-    // console.log(query);
 
     expect(query).toMatchInlineSnapshot(`
 "SELECT
