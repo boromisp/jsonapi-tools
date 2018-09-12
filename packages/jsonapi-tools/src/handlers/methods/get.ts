@@ -1,6 +1,7 @@
 'use strict';
 
 import * as bluebird from 'bluebird';
+import { Writable } from 'stream';
 
 import getRelatedSchema from './internal/get-related-schema';
 import modelForType from './internal/model-for-type';
@@ -10,6 +11,7 @@ import dataToResource from './internal/data-to-resource';
 import CustomError from '../../utils/custom-error';
 
 import { IModel, IModels } from '../../types/model';
+import { ISuccessResponseObject } from '../../types/utils';
 
 import { IRequestParamsBase } from './types/request-params';
 
@@ -17,10 +19,12 @@ import {
   IResourceObject,
   IRelationshipObject,
   ISuccessResourceDocument,
-  ISuccessRelationshipDocument,
-  IResourceIdentifierObject
+  IResourceIdentifierObject,
+  IJSONObject
 } from 'jsonapi-types';
-import { IParsedQueryFields, IParsedIncludes, ISuccessResponseObject } from '../../types/utils';
+import { IParsedQueryFields, IParsedIncludes } from '../../types/utils';
+
+import prefixedLinks from './internal/prefixed-links';
 
 type IGetRest = Pick<IGetRequestParamsBase, 'method' | 'options'>;
 
@@ -28,12 +32,13 @@ function getResource(
   model: IModel,
   id: string,
   fields: IParsedQueryFields | null,
-  rest: IGetRest
+  rest: IGetRest,
+  baseUrl: string | undefined
 ): PromiseLike<IResourceObject | null> {
   return model.getOne(Object.assign({
     id,
     fields: fields && fields[model.schema.type]
-  }, rest)).then(data => data ? dataToResource(model.schema, data) : null);
+  }, rest)).then(data => data ? dataToResource(model.schema, data, baseUrl) : null);
 }
 
 interface IResourceObjects extends Array<IResourceObject> {
@@ -47,7 +52,8 @@ function getResources(
   filters: object | null,
   sorts: string[] | null,
   page: object | null,
-  rest: IGetRest
+  rest: IGetRest,
+  baseUrl: string | undefined
 ): PromiseLike<IResourceObjects> {
   if (ids === null) {
     return model.getAll(Object.assign({
@@ -56,7 +62,7 @@ function getResources(
       sorts,
       page
     }, rest)).then(data => {
-      const resources: IResourceObjects = data.map(item => dataToResource(model.schema, item));
+      const resources: IResourceObjects = data.map(item => dataToResource(model.schema, item, baseUrl));
       if (data.length && data[0].__count) {
         resources.$count = data[0].__count;
       }
@@ -71,7 +77,7 @@ function getResources(
       page
     }, rest)).then(data => {
       if (data) {
-        const resources: IResourceObjects = data.map(item => dataToResource(model.schema, item));
+        const resources: IResourceObjects = data.map(item => dataToResource(model.schema, item, baseUrl));
         if (data.length && data[0].__count) {
           resources.$count = data[0].__count;
         }
@@ -118,10 +124,12 @@ type TypeLinkMap = Map<string, Set<string>>;
 
 function buildLinkMap(links: Array<IResourceObject | IResourceIdentifierObject>, linkMap: TypeLinkMap = new Map()) {
   for (const link of links) {
-    if (!linkMap.has(link.type)) {
-      linkMap.set(link.type, new Set());
+    let linkMapWithType = linkMap.get(link.type);
+    if (!linkMapWithType) {
+      linkMapWithType = new Set();
+      linkMap.set(link.type, linkMapWithType);
     }
-    linkMap.get(link.type)!.add(link.id);
+    linkMapWithType.add(link.id);
   }
   return linkMap;
 }
@@ -139,10 +147,17 @@ function uniqueLinks(links: Array<IResourceObject | IResourceIdentifierObject>):
 type TypeItemCache = Map<string, Map<string, IResourceObject>>;
 
 function addToItemCache(itemCache: TypeItemCache, resource: IResourceObject) {
-  if (!itemCache.has(resource.type)) {
-    itemCache.set(resource.type, new Map());
+  let itemCacheWithType = itemCache.get(resource.type);
+  if (!itemCacheWithType) {
+    itemCacheWithType = new Map();
+    itemCache.set(resource.type, itemCacheWithType);
   }
-  itemCache.get(resource.type)!.set(resource.id, resource);
+  itemCacheWithType.set(resource.id, resource);
+}
+
+function itemCacheContains(itemCache: TypeItemCache, type: string, id: string) {
+  const itemCacheWithType = itemCache.get(type);
+  return itemCacheWithType && itemCacheWithType.has(id);
 }
 
 function includeTier(
@@ -151,7 +166,10 @@ function includeTier(
   tierNodes: IParsedIncludes[],
   itemCache: TypeItemCache,
   includeNodeLinks: Map<IParsedIncludes, IResourceObject[]>,
-  rest: IGetRest): PromiseLike<void> {
+  rest: IGetRest,
+  baseUrl: string | undefined,
+  out?: Writable,
+  some?: boolean): PromiseLike<void> {
   return bluebird.try(() => {
     const tierLinks: TypeLinkMap = new Map();
 
@@ -188,18 +206,27 @@ function includeTier(
     }
 
     const newLinks = [...tierLinks].reduce((links: Array<[IModel, string[]]>, [type, ids]) => {
-      const newIDs = [...ids].filter(id => !itemCache.has(type) || !itemCache.get(type)!.has(id));
+      const newIDs = [...ids].filter(id => !itemCacheContains(itemCache, type, id));
       if (newIDs.length > 0) {
         links.push([modelForType(models, type), newIDs]);
       }
       return links;
     }, []);
 
-    const promises = newLinks.map(([model, ids]) => getResources(model, ids, fields, null, null, null, rest));
+    const promises = newLinks.map(([model, ids]) => getResources(model, ids, fields, null, null, null, rest, baseUrl));
     return bluebird.all(promises);
   }).then(resourceArrays => {
     for (const resources of resourceArrays) {
       for (const resource of resources) {
+        if (out) {
+          if (!some) {
+            out.write(`,"included":[`);
+            some = true;
+          } else {
+            out.write(',');
+          }
+          out.write(JSON.stringify(resource));
+        }
         addToItemCache(itemCache, resource);
       }
     }
@@ -214,10 +241,13 @@ function includeTier(
     }, []);
 
     if (nextTierNodes.length === 0) {
+      if (out && some) {
+        out.write(']');
+      }
       return;
     }
 
-    return includeTier(models, fields, nextTierNodes, itemCache, includeNodeLinks, rest);
+    return includeTier(models, fields, nextTierNodes, itemCache, includeNodeLinks, rest, baseUrl, out, some);
   });
 }
 
@@ -226,7 +256,9 @@ function getIncludedResources(
   primary: IResourceObject[],
   fields: IParsedQueryFields | null,
   includes: IParsedIncludes,
-  rest: IGetRest
+  rest: IGetRest,
+  baseUrl: string | undefined,
+  out?: Writable
 ): PromiseLike<IResourceObject[]> {
   return bluebird.try(() => {
     const primaryType = primary[0].type;
@@ -241,14 +273,15 @@ function getIncludedResources(
     const includeNodeLinks: Map<IParsedIncludes, IResourceObject[]> = new Map();
     includeNodeLinks.set(includes, primary);
 
-    return includeTier(models, fields, [includes], itemCache, includeNodeLinks, rest).then(() => {
+    return includeTier(models, fields, [includes], itemCache, includeNodeLinks, rest, baseUrl, out).then(() => {
       const included: IResourceObject[] = [];
       // TODO: what if includeNodeLinks doesn't contain includes?
       const primaryLinks = buildLinkMap(includeNodeLinks.get(includes)!);
 
       for (const [type, ids] of itemCache) {
         for (const [id, resource] of ids) {
-          if (!primaryLinks.has(type) || !primaryLinks.get(type)!.has(id)) {
+          const primaryLinksWithType = primaryLinks.get(type);
+          if (!primaryLinksWithType || !primaryLinksWithType.has(id)) {
             included.push(resource);
           }
         }
@@ -310,14 +343,18 @@ export function isRelatedRequest(
 
 function includeRelatedResources(
   requestParams: IGetOneRequestParams | IGetAllRequestParams | IGetRelatedResourceRequestParams,
-  top: ISuccessResourceDocument
+  top: ISuccessResourceDocument,
+  out?: Writable
 ): PromiseLike<ISuccessResourceDocument> {
-  const { models, fields, includes, options, method } = requestParams;
+  const { models, fields, includes, options, method, baseUrl } = requestParams;
   const rest = { options, method};
 
   if (includes && top.data && (!Array.isArray(top.data) || top.data.length)) {
     const primary = Array.isArray(top.data) ? top.data : [top.data];
-    return getIncludedResources(models, primary, fields, includes, rest).then(included => {
+    return getIncludedResources(models, primary, fields, includes, rest, baseUrl, out).then(included => {
+      if (out) {
+        return top;
+      }
       if (included.length) {
         top.included = included;
       }
@@ -328,9 +365,9 @@ function includeRelatedResources(
 }
 
 function getRelatedResourceDocument(
-  requestParams: IGetRelatedResourceRequestParams
-): PromiseLike<ISuccessResourceDocument> {
-  const { models, type, fields, options, page, method, filters, sorts, id, relationship } = requestParams;
+  requestParams: IGetRelatedResourceRequestParams, out?: Writable
+): PromiseLike<void|ISuccessResourceDocument> {
+  const { models, type, fields, options, page, method, filters, sorts, id, relationship, baseUrl } = requestParams;
   const rest = { options, method};
 
   return bluebird.try(() => modelForType(models, type))
@@ -347,7 +384,8 @@ function getRelatedResourceDocument(
             modelForType(models, relationshipObject.data[0].type),
             relationshipObject.data.map(item => item.id),
             fields, filters, sorts, page,
-            rest
+            rest,
+            baseUrl
           ).then(data => {
             top.data = data;
             if (typeof data.$count !== 'undefined') {
@@ -362,29 +400,33 @@ function getRelatedResourceDocument(
           modelForType(models, relationshipObject.data.type),
           relationshipObject.data.id,
           fields,
-          rest
+          rest,
+          baseUrl
         ).then(data => { top.data = data; return top; });
       }
       return top;
-    }).then(top => includeRelatedResources(requestParams, top));
+    }).then(top => includeRelatedResources(requestParams, top))
+    .then(top => out ? bluebird.fromCallback(callback => out.write(JSON.stringify(top), callback)) : top);
 }
 
 function getRelationshipDocument(
-  requestParams: IGetRelationshipRequestParams
-): PromiseLike<ISuccessRelationshipDocument> {
+  requestParams: IGetRelationshipRequestParams, out?: Writable
+): PromiseLike<void|ISuccessResourceDocument> {
   const { models, type, options, page, method, id, relationship } = requestParams;
   const rest = { options, page, method};
 
   return bluebird.try(() => modelForType(models, type))
-    .then(model => getRelationshipObject(model, id, relationship, null, rest));
+    .then(model => getRelationshipObject(model, id, relationship, null, rest))
+    .then(top => out ? bluebird.fromCallback(callback => out.write(JSON.stringify(top), callback)) : top);
 }
 
-function getResourceDocument(requestParams: IGetOneRequestParams): PromiseLike<ISuccessResourceDocument> {
-  const { models, type, fields, options, method } = requestParams;
+function getResourceDocument(
+  requestParams: IGetOneRequestParams, out?: Writable): PromiseLike<void|ISuccessResourceDocument> {
+  const { models, type, fields, options, method, baseUrl } = requestParams;
   const rest = { options, method};
 
   return bluebird.try(() => modelForType(models, type))
-    .then(model => getResource(model, requestParams.id, fields, rest))
+    .then(model => getResource(model, requestParams.id, fields, rest, baseUrl))
     .then(resource => {
       if (!resource) {
         throw new CustomError(`Item of type ${type} with id ${requestParams.id} not found.`, 404);
@@ -394,41 +436,85 @@ function getResourceDocument(requestParams: IGetOneRequestParams): PromiseLike<I
         top.links = { self: resource.links.self };
       }
       return includeRelatedResources(requestParams, top);
-    });
+    })
+    .then(top => out ? bluebird.fromCallback(callback => out.write(JSON.stringify(top), callback)) : top);
 }
 
-function getResourcesDocument(requestParams: IGetAllRequestParams): PromiseLike<ISuccessResourceDocument> {
-  const { models, type, fields, options, page, method } = requestParams;
+function getResourcesDocument(
+  requestParams: IGetAllRequestParams, out?: Writable): PromiseLike<void|ISuccessResourceDocument> {
+  const { models, type, fields, options, page, method, baseUrl } = requestParams;
   const rest = { options, page, method};
 
   return bluebird.try(() => modelForType(models, type))
-    .then((model: IModel) => getResources(model, null, fields, requestParams.filters, requestParams.sorts, page, rest)
+    .then((model: IModel) => getResources(
+      model, null, fields, requestParams.filters, requestParams.sorts, page, rest, baseUrl)
       .then(resources => {
-         return includeRelatedResources(requestParams, {
-          links: model.schema.links ? model.schema.links() : {
-            self: `/${type}`
-          },
-          data: resources,
-          ...(typeof resources.$count === 'undefined'
-            ? null
-            : { meta: { count: resources.$count || resources.length } })
-        });
+        const count = resources.$count;
+        delete resources.$count;
+
+        const links = prefixedLinks(
+          requestParams.baseUrl,
+          model.schema.links ? model.schema.links() : { self: `/${type}` }
+        );
+
+        const meta: IJSONObject | undefined = count === undefined ? undefined : { count: count || resources.length };
+
+        if (!out) {
+          const top: ISuccessResourceDocument = {
+            data: resources
+          };
+
+          if (links) {
+            top.links = links;
+          }
+
+          if (meta) {
+            top.meta = meta;
+          }
+          return includeRelatedResources(requestParams, top);
+        }
+
+        if (links) {
+          out.write(`{"links":${JSON.stringify(links)},"data":`);
+        } else {
+          out.write('{"data":');
+        }
+
+        out.write(JSON.stringify(resources));
+
+        if (meta) {
+          out.write(`,"meta":${JSON.stringify(meta)}`);
+        }
+
+        return includeRelatedResources(requestParams, { data: resources }, out).then(top => {
+          if (top.included && top.included.length) {
+            out.write(',"included":');
+            out.write(JSON.stringify(top.included));
+          }
+          return bluebird.fromCallback(callback => out.write('}', callback));
+        }).then(top => top as any as ISuccessResourceDocument | undefined);
       }));
 }
 
 function getResponseDocument(
-  requestParams: IGetRequestParams
-): PromiseLike<ISuccessResourceDocument | ISuccessRelationshipDocument> {
+  requestParams: IGetRequestParams, out?: Writable
+): PromiseLike<void|ISuccessResourceDocument> {
   if (isRelatedRequest(requestParams)) {
     return requestParams.asLink
-      ? getRelationshipDocument(requestParams)
-      : getRelatedResourceDocument(requestParams);
+      ? getRelationshipDocument(requestParams, out)
+      : getRelatedResourceDocument(requestParams, out);
   }
   return isGetOneRequest(requestParams)
-    ? getResourceDocument(requestParams)
-    : getResourcesDocument(requestParams);
+    ? getResourceDocument(requestParams, out)
+    : getResourcesDocument(requestParams, out);
 }
 
-export default function get(requestParams: IGetRequestParams): PromiseLike<ISuccessResponseObject> {
-  return getResponseDocument(requestParams).then(top => ({ status: 200, body: top }));
+export default function get(
+  requestParams: IGetRequestParams, out?: Writable): PromiseLike<void|ISuccessResponseObject> {
+  return getResponseDocument(requestParams, out).then(top => {
+    if (top) {
+      return { status: 200, body: top };
+    }
+    return;
+  });
 }

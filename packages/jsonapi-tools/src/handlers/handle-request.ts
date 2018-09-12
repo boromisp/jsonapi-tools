@@ -1,6 +1,8 @@
 'use strict';
 
 import * as bluebird from 'bluebird';
+import { file } from 'tmp-promise';
+import { createWriteStream } from 'fs';
 
 import get, { IGetRequestParams } from './methods/get';
 import post, { ICreateRequestParams } from './methods/post';
@@ -16,10 +18,24 @@ export type TypeRequestParams =
   | IUpdateRequestParams
   | IDeleteRequestParams;
 
-export default function handleRequest(requestObject: TypeRequestParams): PromiseLike<ISuccessResponseObject> {
+export default function handleRequest(
+  requestObject: TypeRequestParams
+): PromiseLike<ISuccessResponseObject> {
   return bluebird.try(() => {
     switch (requestObject.method) {
-      case 'get': return get(requestObject);
+      case 'get': {
+        return file({ discardDescriptor: true, postfix: '.json' }).then(tmpFile => {
+          const writer = createWriteStream(tmpFile.path);
+          return get(requestObject, writer).then(() => {
+            writer.close();
+            return { status: 200, file: tmpFile };
+          }, err => {
+            writer.close();
+            tmpFile.cleanup();
+            throw err;
+          });
+        });
+      }
       case 'post': return post(requestObject);
       case 'patch': return patch(requestObject);
       case 'delete': return del(requestObject);

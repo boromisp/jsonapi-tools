@@ -30,7 +30,8 @@ export function createResourceObject(
   model: IModel,
   body: IUpdateResourceDocument,
   rest: ICreateRest,
-  models: IModels
+  models: IModels,
+  baseUrl: string | undefined
 ): PromiseLike<IResourceObject> {
   return bluebird.try(() => {
     const schema = model.schema;
@@ -51,7 +52,7 @@ export function createResourceObject(
       .then(() => model.create(Object.assign({
         data: Object.assign({}, body.data.attributes!, body.data.relationships!)
       }, rest)))
-      .then(data => dataToResource(model.schema, data));
+      .then(data => dataToResource(model.schema, data, baseUrl));
   });
 }
 
@@ -59,9 +60,10 @@ function createResource(
   model: IModel,
   docBody: IUpdateResourceDocument,
   rest: ICreateRest,
-  models: IModels
+  models: IModels,
+  baseUrl: string | undefined
 ): PromiseLike<ISuccessResponseObject> {
-  return createResourceObject(model, docBody, rest, models).then(resource => {
+  return createResourceObject(model, docBody, rest, models, baseUrl).then(resource => {
     const body: ICreateResponseDocument = {
       data: resource
     };
@@ -141,19 +143,19 @@ function isBatchRequest(request: ICreateRequestParams): request is IBatchRequest
 }
 
 export default function create(requestParams: ICreateRequestParams): PromiseLike<ISuccessResponseObject> {
-  const { type, models, options, method } = requestParams;
+  const { type, models, options, method, baseUrl } = requestParams;
   const rest = { options, method };
 
   if (isRelatedRequest(requestParams)) {
     return bluebird.try(() => modelForType(models, type))
       .then(model => addToRelationship(model, requestParams.id, requestParams.relationship, requestParams.body, rest));
   } else if (isBatchRequest(requestParams)) {
-    return batch(models, requestParams.body.batch, rest).then(data => ({
+    return batch(models, requestParams.body.batch, rest, baseUrl).then(data => ({
       status: 200,
       body: { data }
     }));
   } else {
     return bluebird.try(() => modelForType(models, type))
-      .then(model => createResource(model, requestParams.body, rest, models));
+      .then(model => createResource(model, requestParams.body, rest, models, baseUrl));
   }
 }

@@ -24,7 +24,8 @@ export function updateResourceObject(
   id: string,
   body: IUpdateResourceDocument,
   rest: IUpdateRest,
-  models: IModels
+  models: IModels,
+  baseUrl: string | undefined
 ) {
   return bluebird.try(() => {
     const schema = model.schema;
@@ -55,7 +56,7 @@ export function updateResourceObject(
     } else if (data === true) {
       return null;
     }
-    return data ? dataToResource(model.schema, data) : null;
+    return data ? dataToResource(model.schema, data, baseUrl) : null;
   });
 }
 
@@ -106,14 +107,14 @@ function isRelatedRequest(request: IUpdateRequestParams): request is IUpdateRela
 }
 
 export default function update(requestParams: IUpdateRequestParams): PromiseLike<ISuccessResponseObject> {
-  const { type, id, models, options, method } = requestParams;
+  const { type, id, models, options, method, baseUrl } = requestParams;
   const rest = { options, method };
 
   return bluebird.try(() => modelForType(models, type))
     .then(model => (
         isRelatedRequest(requestParams)
         ? updateRelationship(model, id, requestParams.relationship, requestParams.body, rest)
-        : updateResourceObject(model, id, requestParams.body, rest, models).then(data => ({ data }))
+        : updateResourceObject(model, id, requestParams.body, rest, models, baseUrl).then(data => ({ data }))
       ) as PromiseLike<IResourceObject | IRelationshipObject | null>
     ).then(top => top ? { status: 200, body: top } : { status: 204 }) as PromiseLike<ISuccessResponseObject>;
 }
