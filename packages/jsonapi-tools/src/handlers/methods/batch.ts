@@ -13,7 +13,8 @@ import {
   isBatchMeta,
   IJSONObject,
   IUpdateResourceDocument,
-  IResourceObjectBase
+  IResourceObjectBase,
+  IBatchAction
 } from 'jsonapi-types';
 
 import { createResourceObject, ICreateRest } from './post';
@@ -36,7 +37,7 @@ function relationshipHasUnresolvedBatchID(data: IResourceIdentifierObject | IRes
   }
 }
 
-function resourceHasUnresolvedBatchID(resource: IBatchOperation) {
+function resourceHasUnresolvedBatchID(resource: IBatchOperation | IBatchAction) {
   if (isBatchMeta(resource.meta)
     && resource.meta['batch-key']
     && !resource.id
@@ -55,23 +56,47 @@ function resourceHasUnresolvedBatchID(resource: IBatchOperation) {
   return false;
 }
 
+function notAnAction(resource: IBatchOperation | IBatchAction) {
+  return !isBatchMeta(resource.meta) || resource.meta.op !== 'action';
+}
+
 const post: ICreateParams['method'] = 'post';
 const patch: IUpdateParams['method'] = 'patch';
 const del: IDeleteParams['method'] = 'delete';
 
 function sidepostCreate(
-  model: IModel, resource: IBatchOperation, rest: ICreateRest, models: IModels, baseUrl: string | undefined) {
+  model: IModel,
+  resource: IBatchOperation | IBatchAction,
+  rest: ICreateRest,
+  models: IModels,
+  baseUrl: string | undefined
+) {
   return createResourceObject(model, { data: resource } as IUpdateResourceDocument, rest, models, baseUrl);
 }
 
 function sidepostUpdate(
-  model: IModel, resource: IBatchOperation, rest: IUpdateRest, models: IModels, baseUrl: string | undefined) {
+  model: IModel,
+  resource: IBatchOperation | IBatchAction,
+  rest: IUpdateRest,
+  models: IModels,
+  baseUrl: string | undefined
+) {
   return updateResourceObject(
     model, resource.id!, { data: resource } as IUpdateResourceDocument, rest, models, baseUrl);
 }
 
-function sidepostDelete(model: IModel, resource: IBatchOperation, rest: IDeleteRest) {
+function sidepostDelete(model: IModel, resource: IBatchOperation | IBatchAction, rest: IDeleteRest) {
   return model.delete(Object.assign({ id: resource.id! }, rest));
+}
+
+function sidepostAction(model: IModel, resource: IBatchOperation | IBatchAction, rest: ISidepostRest) {
+  if (model.action) {
+    return model.action(Object.assign({
+      id: resource.id!,
+      data: Object.assign({}, resource.attributes!, resource.relationships!)
+    }, rest)).then(() => null);
+  }
+  throw new CustomError(`Cannot call action on ${model.schema.type}.`, 403);
 }
 
 function cacheBatchKey(data: IResourceObjectBase, cache: Map<string, IResourceObjectBase[]>) {
@@ -112,17 +137,23 @@ function resolveBatchKey(resource: IResourceObject | null, cache: Map<string, IR
 function next(
   models: IModels,
   batchKeyReferences: Map<string, IResourceObjectBase[]>,
-  remainingOperations: IBatchOperation[],
+  remainingOperations: Array<IBatchOperation | IBatchAction>,
   createRest: ICreateRest,
   updateRest: IUpdateRest,
   deleteRest: IDeleteRest,
+  rest: ISidepostRest,
   baseUrl: string | undefined,
   results?: Array<IResourceObject | null>): PromiseLike<Array<IResourceObject | null>> {
   return bluebird.try(() => {
     if (remainingOperations.length === 0) {
       throw new CustomError('Empty batch array.', 400);
     }
-    const nextOperationIndex = remainingOperations.findIndex(remOp => !resourceHasUnresolvedBatchID(remOp));
+    let nextOperationIndex = remainingOperations.findIndex(
+      remOp => !resourceHasUnresolvedBatchID(remOp) && notAnAction(remOp)
+    );
+    if (nextOperationIndex === -1) {
+      nextOperationIndex = remainingOperations.findIndex(remOp => !resourceHasUnresolvedBatchID(remOp));
+    }
     if (nextOperationIndex === -1) {
       throw new CustomError('Could not resolve all the side posted operations', 400);
     }
@@ -156,6 +187,8 @@ function next(
         }
         return null;
       });
+    case 'action':
+      return sidepostAction(model, nextOperation, rest);
     default:
       throw new CustomError(`Invalid sideposting operation: ${op}.`, 400);
     }
@@ -177,6 +210,7 @@ function next(
       createRest,
       updateRest,
       deleteRest,
+      rest,
       baseUrl,
       results
     );
@@ -187,7 +221,7 @@ export type ISidepostRest = Pick<ICreateRest, 'options'>;
 
 export default function processBatch(
   models: IModels,
-  batch: IBatchOperation[],
+  batch: Array<IBatchOperation | IBatchAction>,
   rest: ISidepostRest,
   baseUrl: string | undefined
 ): PromiseLike<Array<IResourceObject|null>> {
@@ -216,6 +250,7 @@ export default function processBatch(
       Object.assign({ method: post }, rest),
       Object.assign({ method: patch }, rest),
       Object.assign({ method: del }, rest),
+      rest,
       baseUrl
     );
   });

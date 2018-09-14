@@ -91,6 +91,11 @@ export interface IDeleteParams {
   options: object;
 }
 
+export interface IActionParams {
+  data: IJSONObject;
+  options: object;
+}
+
 export interface IChangeRelationshipParamsBase {
   method: string;
   id: string;
@@ -122,6 +127,7 @@ export interface IModel {
   deleteFromRelationship?: (obj: IDeleteFromRelationshipParams) => PromiseLike<ILinkage[] | null>;
   addToRelationship?: (obj: IAddToRelationshipParams) => PromiseLike<ILinkage[] | null>;
   updateRelationship?: (obj: IUpdateRelationshipParams) => PromiseLike<ILinkage[] | null>;
+  action?: (obj: IActionParams) => PromiseLike<void>;
 }
 
 export interface IModels { [key: string]: IModel; }
