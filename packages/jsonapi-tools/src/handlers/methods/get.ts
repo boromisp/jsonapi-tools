@@ -213,8 +213,11 @@ function includeTier(
       return links;
     }, []);
 
-    const promises = newLinks.map(([model, ids]) => getResources(model, ids, fields, null, null, null, rest, baseUrl));
-    return bluebird.all(promises);
+    return bluebird.map(
+      newLinks,
+      ([model, ids]) => getResources(model, ids, fields, null, null, null, rest, baseUrl),
+      { concurrency: 2 }
+    );
   }).then(resourceArrays => {
     for (const resources of resourceArrays) {
       for (const resource of resources) {

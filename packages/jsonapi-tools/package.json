@@ -10,31 +10,31 @@
   "main": "lib/adapters/local/index.js",
   "typings": "lib/adapters/local/index.d.ts",
   "scripts": {
-    "lint": "tslint src",
+    "lint": "tslint -c tslint.json './src/**/*.ts'",
     "build": "tsc",
     "test": "jest",
     "coverage": "jest --coverage"
   },
   "dependencies": {
-    "@types/bluebird": "^3.5.23",
-    "@types/express": "^4.16.0",
-    "@types/node": "^10.7.1",
-    "@types/tmp": "0.0.33",
-    "tmp-promise": "^1.0.5",
-    "bluebird": "^3.4",
+    "@types/bluebird": "^3.5.25",
+    "@types/express": "^4.16.1",
+    "bluebird": "^3.5.3",
     "denormalize-jsonapi": "^1.7.0",
-    "jsonapi-types": "^1.8.0"
+    "jsonapi-types": "^1.9.0",
+    "tmp-promise": "^1.0.5"
   },
   "devDependencies": {
-    "@types/jest": "^23.3.1",
-    "jest": "^23.5.0",
-    "ts-jest": "^23.1.4",
-    "tslint": "^5.11.0",
-    "typescript": "^3.0.1"
+    "@types/jest": "^24.0.9",
+    "@types/node": "^11.9.5",
+    "@types/tmp": "0.0.34",
+    "jest": "^24.1.0",
+    "ts-jest": "^24.0.0",
+    "tslint": "^5.13.0",
+    "typescript": "^3.3.3333"
   },
   "jest": {
     "transform": {
-      ".(ts|tsx)": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+      ".(ts|tsx)": "ts-jest"
     },
     "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
     "moduleFileExtensions": [

@@ -15,7 +15,7 @@ const schema = {
 
 const schemaWithCustomLinks = {
   type: 'test-type',
-  links(id) {
+  links(id?: string) {
     return {
       self: {
         href: `/v2/test-type/${id}`,

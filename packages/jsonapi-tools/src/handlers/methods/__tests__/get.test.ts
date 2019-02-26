@@ -1,7 +1,17 @@
 import 'jest';
 
 import get, { IGetOneRequestParams, IGetAllRequestParams } from '../get';
-import { IModel, IModels, ISchema, IResourceData } from '../../../types/model';
+import {
+  IModel,
+  IModels,
+  ISchema,
+  IResourceData,
+  ICreateParams,
+  IGetOneParams,
+  IGetSomeParams,
+  IUpdateParams,
+  IDeleteParams
+} from '../../../types/model';
 
 class MockModel implements IModel {
   public schema: ISchema;
@@ -14,11 +24,11 @@ class MockModel implements IModel {
     this._maxId = data.reduce((maxId, row) => Math.max(maxId, Number(row.id)), 0);
   }
 
-  public async getOne({ id }) {
+  public async getOne({ id }: IGetOneParams) {
     return this._data.find(row => row.id === id) || null;
   }
 
-  public async getSome({ ids }) {
+  public async getSome({ ids }: IGetSomeParams) {
     return this._data.filter(row => ids.some(id => row.id === id));
   }
 
@@ -29,22 +39,22 @@ class MockModel implements IModel {
     });
   }
 
-  public async create({ data }) {
+  public async create({ data }: ICreateParams) {
     this._maxId += 1;
     const row = Object.assign({ id: String(this._maxId) }, data);
     this._data.push(row);
     return row;
   }
 
-  public async update({ id, data }) {
-    const row = await this.getOne({ id });
+  public async update({ id, data }: IUpdateParams) {
+    const row = await this.getOne({ method: 'get', fields: null, options: {}, id });
     if (row) {
       return Object.assign(row, data);
     }
     return false;
   }
 
-  public async delete({ id }) {
+  public async delete({ id }: IDeleteParams) {
     const i = this._data.findIndex(row => row.id === id);
     if (i === -1) {
       return false;
