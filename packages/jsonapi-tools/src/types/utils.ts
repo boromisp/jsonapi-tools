@@ -1,4 +1,4 @@
-import { ISuccessDocument, IErrorDocument } from 'jsonapi-types';
+import { ISuccessDocument, IErrorDocument, IJSONObject, ILink } from 'jsonapi-types';
 import { FileResult } from 'tmp-promise';
 
 export interface IExtendedError extends Error {
@@ -9,6 +9,11 @@ export interface IExtendedError extends Error {
   };
   code?: number | string;
   title?: string;
+  id?: string;
+  meta ?: IJSONObject;
+  links?: {
+    about: ILink;
+  };
 }
 
 export interface ISuccessResponseObject {

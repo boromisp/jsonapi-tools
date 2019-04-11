@@ -1,6 +1,6 @@
 {
   "name": "jsonapi-types",
-  "version": "1.9.0",
+  "version": "1.10.1",
   "description": "TypeScript interfaces and type guards for {json:api} types",
   "license": "MIT",
   "homepage": "https://github.com/boromisp/jsonapi-tools/tree/master/packages/jsonapi-types",
@@ -11,12 +11,12 @@
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "scripts": {
-    "lint": "tslint src",
+    "lint": "tslint -c tslint.json './src/**/*.ts'",
     "build": "tsc"
   },
   "devDependencies": {
-    "tslint": "^5.3.2",
-    "typescript": "^2.3.0"
+    "tslint": "^5.15.0",
+    "typescript": "^3.4.3"
   },
   "repository": {
     "type": "git",

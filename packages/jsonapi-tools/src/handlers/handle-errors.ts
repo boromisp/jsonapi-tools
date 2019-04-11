@@ -21,6 +21,16 @@ function transformError(error: IExtendedError): JSONAPI.IErrorObject {
   if (error.title) {
     val.title = error.title;
   }
+  if (error.meta) {
+      val.meta = error.meta;
+  }
+  if (error.id) {
+      val.id = error.id;
+  }
+  if (error.links) {
+      val.links = error.links;
+  }
+
   return val;
 }
 

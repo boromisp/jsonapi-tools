@@ -140,7 +140,7 @@ export function isBatchAction(val: IBatchOperation | IBatchAction): val is IBatc
  */
 export interface IErrorObject {
   id?: string;
-  links?: { about: string };
+  links?: { about: ILink };
   status?: number;
   code?: string | number;
   title?: string;
