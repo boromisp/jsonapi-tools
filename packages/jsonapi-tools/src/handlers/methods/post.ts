@@ -48,7 +48,7 @@ export function createResourceObject(
       throw new CustomError('Malformed request body.', 400);
     }
 
-    return verifyRelationships(models, rest.options, body.data.relationships)
+    return verifyRelationships(models, rest.options, schema, body.data.relationships)
       .then(() => model.create(Object.assign({
         data: Object.assign({}, body.data.attributes!, body.data.relationships!)
       }, rest)))

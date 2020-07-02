@@ -45,7 +45,7 @@ export function updateResourceObject(
       throw new CustomError('Malformed request body.', 400);
     }
 
-    return verifyRelationships(models, rest.options, body.data.relationships)
+    return verifyRelationships(models, rest.options, schema, body.data.relationships)
       .then(() => model.update(Object.assign({
         id,
         data: Object.assign({}, body.data.attributes!, body.data.relationships!)

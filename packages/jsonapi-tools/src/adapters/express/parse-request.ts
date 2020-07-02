@@ -1,28 +1,26 @@
 'use strict';
 
-import { allowedMethods } from './cors-configs';
 import { Request } from 'express';
+import { ParsedQs } from 'qs';
 
+import { allowedMethods } from './cors-configs';
 import { IParsedQueryFields, IParsedIncludes } from '../../types/utils';
 import CustomError from '../../utils/custom-error';
 import { TypeRequestParams } from '../../handlers/handle-request';
 import { IRequestOptions } from '../../handlers/methods/types/request-params';
 
-function getFields(field?: string): Set<string> {
-  if (!field || !field.split) {
+function getFields(field?: ParsedQs['key']): Set<string> {
+  if (!field || typeof field !== 'string') {
     throw Object.assign(new Error('Malformed fields query parameter.'), { status: 400 });
   }
   return new Set(field.split(','));
 }
 
-interface IQueryFields {
-  [key: string]: string;
-}
-
-function parseFieldsQuery(fieldsQuery?: IQueryFields): IParsedQueryFields | null {
-  if (!fieldsQuery) {
+function parseFieldsQuery(fieldsQuery?: ParsedQs['key']): IParsedQueryFields | null {
+  if (!fieldsQuery || typeof fieldsQuery === 'string' || Array.isArray(fieldsQuery)) {
     return null;
-   }
+  }
+
   const parsedFields: IParsedQueryFields = {};
   for (const type of Object.keys(fieldsQuery)) {
     parsedFields[type] = getFields(fieldsQuery[type]);
@@ -30,10 +28,11 @@ function parseFieldsQuery(fieldsQuery?: IQueryFields): IParsedQueryFields | null
   return parsedFields;
 }
 
-function parseIncludeQuery(includeQuery?: string): IParsedIncludes | null {
-  if (!includeQuery || !includeQuery.split) {
+function parseIncludeQuery(includeQuery?: ParsedQs['key']): IParsedIncludes | null {
+  if (!includeQuery || typeof includeQuery !== 'string') {
     return null;
   }
+
   const includes: IParsedIncludes = {};
   for (const path of includeQuery.split(',')) {
     let node = includes;
@@ -44,8 +43,8 @@ function parseIncludeQuery(includeQuery?: string): IParsedIncludes | null {
   return includes;
 }
 
-function parseSortQuery(sortQuery?: string): string[] | null {
-  return sortQuery && sortQuery.split ? sortQuery.split(',') : null;
+function parseSortQuery(sortQuery?: ParsedQs['key']): string[] | null {
+  return typeof sortQuery === 'string' ? sortQuery.split(',') : null;
 }
 
 function urlIsLink(url: string): boolean {

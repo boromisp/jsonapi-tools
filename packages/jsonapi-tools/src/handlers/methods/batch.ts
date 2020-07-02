@@ -137,13 +137,13 @@ function resolveBatchKey(resource: IResourceObject | null, cache: Map<string, IR
 function next(
   models: IModels,
   batchKeyReferences: Map<string, IResourceObjectBase[]>,
-  remainingOperations: Array<IBatchOperation | IBatchAction>,
+  remainingOperations: (IBatchOperation | IBatchAction)[],
   createRest: ICreateRest,
   updateRest: IUpdateRest,
   deleteRest: IDeleteRest,
   rest: ISidepostRest,
   baseUrl: string | undefined,
-  results?: Array<IResourceObject | null>): PromiseLike<Array<IResourceObject | null>> {
+  results?: (IResourceObject | null)[]): PromiseLike<(IResourceObject | null)[]> {
   return bluebird.try(() => {
     if (remainingOperations.length === 0) {
       throw new CustomError('Empty batch array.', 400);
@@ -221,10 +221,10 @@ export type ISidepostRest = Pick<ICreateRest, 'options'>;
 
 export default function processBatch(
   models: IModels,
-  batch: Array<IBatchOperation | IBatchAction>,
+  batch: (IBatchOperation | IBatchAction)[],
   rest: ISidepostRest,
   baseUrl: string | undefined
-): PromiseLike<Array<IResourceObject|null>> {
+): PromiseLike<(IResourceObject|null)[]> {
   return bluebird.try(() => {
     const batchKeyReferences = new Map();
     for (const operation of batch) {

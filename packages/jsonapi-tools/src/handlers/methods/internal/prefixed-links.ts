@@ -2,7 +2,7 @@ import { IResourceLinks } from 'jsonapi-types';
 
 export default (baseUrl?: string, links?: IResourceLinks): IResourceLinks | undefined => {
     if (typeof baseUrl === 'string' && links) {
-      (Object.keys(links) as Array<keyof IResourceLinks>).forEach(name => {
+      (Object.keys(links) as (keyof IResourceLinks)[]).forEach(name => {
         const link = links![name];
         if (typeof link === 'string') {
           links![name] = baseUrl + link;

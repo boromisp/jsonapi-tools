@@ -122,7 +122,7 @@ function validateIncludes(models: IModels, type: string, includes: IParsedInclud
 
 type TypeLinkMap = Map<string, Set<string>>;
 
-function buildLinkMap(links: Array<IResourceObject | IResourceIdentifierObject>, linkMap: TypeLinkMap = new Map()) {
+function buildLinkMap(links: (IResourceObject | IResourceIdentifierObject)[], linkMap: TypeLinkMap = new Map()) {
   for (const link of links) {
     let linkMapWithType = linkMap.get(link.type);
     if (!linkMapWithType) {
@@ -134,8 +134,8 @@ function buildLinkMap(links: Array<IResourceObject | IResourceIdentifierObject>,
   return linkMap;
 }
 
-function uniqueLinks(links: Array<IResourceObject | IResourceIdentifierObject>): IResourceIdentifierObject[] {
-  const out: Array<{ type: string, id: string }> = [];
+function uniqueLinks(links: (IResourceObject | IResourceIdentifierObject)[]): IResourceIdentifierObject[] {
+  const out: ({ type: string, id: string })[] = [];
   for (const [type, ids] of buildLinkMap(links)) {
     for (const id of ids) {
       out.push({ type, id });
@@ -205,7 +205,7 @@ function includeTier(
       }
     }
 
-    const newLinks = [...tierLinks].reduce((links: Array<[IModel, string[]]>, [type, ids]) => {
+    const newLinks = [...tierLinks].reduce((links: ([IModel, string[]])[], [type, ids]) => {
       const newIDs = [...ids].filter(id => !itemCacheContains(itemCache, type, id));
       if (newIDs.length > 0) {
         links.push([modelForType(models, type), newIDs]);
