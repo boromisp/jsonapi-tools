@@ -175,16 +175,17 @@ function includeTier(
 
     for (const node of tierNodes) {
       // TODO: includeNodeLinks.get(node) what if not found?
-      const nodeParents = includeNodeLinks.get(node)!.map(identifier => {
+      const nodeParents = includeNodeLinks.get(node)!.reduce((nodes, identifier) => {
         const resourcesWithType = itemCache.get(identifier.type);
         if (resourcesWithType) {
           const parent = resourcesWithType.get(identifier.id);
           if (parent) {
-            return parent;
+            nodes.push(parent);
           }
         }
-        throw new Error('Parent node missing with type: ' + identifier.type + ' and id: ' + identifier.id + '.');
-      }).filter(Boolean);
+        return nodes;
+        // throw new Error('Parent node missing with type: ' + identifier.type + ' and id: ' + identifier.id + '.');
+      }, [] as IResourceObject[]);
 
       for (const relationship of Object.keys(node)) {
         const nodeLinks = uniqueLinks(nodeParents.reduce((links: IResourceIdentifierObject[], resource) => {
